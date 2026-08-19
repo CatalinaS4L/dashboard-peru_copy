@@ -7,7 +7,7 @@ const MONTH_URLS = {
 };
 
 let rawData = [];
-let filteredData = []; // Datos filtrados sobre los que se aplicará el ordenamiento
+let filteredData = [];
 
 // Control del estado de ordenamiento
 let currentSortColumn = null;
@@ -34,7 +34,7 @@ function loadDashboardData() {
     },
     complete: function(results) {
       rawData = results.data;
-      filteredData = [...rawData]; // Inicializar copia para filtrado
+      filteredData = [...rawData];
       
       resetSelect('filter-trainer');
       resetSelect('filter-supervisor');
@@ -94,7 +94,6 @@ function filterData() {
     return matchTrainer && matchSupervisor && matchCoordinador;
   });
 
-  // Re-aplicar orden previo si existía
   if (currentSortColumn) {
     applySort();
   } else {
@@ -103,18 +102,25 @@ function filterData() {
 }
 
 // ==========================================
-// 4. FUNCIÓN DE ORDENAMIENTO (ASC / DESC)
+// 4. LÓGICA DE ORDENAMIENTO (ASC / DESC)
 // ==========================================
-function sortTable(columnKey) {
-  // Si vuelve a hacer clic en la misma columna, invierte el orden (ASC -> DESC -> ASC)
-  if (currentSortColumn === columnKey) {
-    isAscending = !isAscending;
-  } else {
-    currentSortColumn = columnKey;
-    isAscending = true;
-  }
+function setupTableHeaderEvents() {
+  const headers = document.querySelectorAll('#agents-table th');
+  headers.forEach(header => {
+    header.addEventListener('click', () => {
+      const columnKey = header.getAttribute('data-column');
+      if (!columnKey) return;
 
-  applySort();
+      if (currentSortColumn === columnKey) {
+        isAscending = !isAscending;
+      } else {
+        currentSortColumn = columnKey;
+        isAscending = true;
+      }
+
+      applySort();
+    });
+  });
 }
 
 function applySort() {
@@ -122,16 +128,16 @@ function applySort() {
     let valA = getColumnValue(a, currentSortColumn);
     let valB = getColumnValue(b, currentSortColumn);
 
-    // Limpieza de valores para comparación numérica o porcentaje
+    // Limpiar para detectar si son porcentajes o números
     let numA = parseFloat(valA.toString().replace('%', '').replace(',', '.'));
     let numB = parseFloat(valB.toString().replace('%', '').replace(',', '.'));
 
-    // Si ambos son números válidos, ordenar numéricamente
+    // Orden numérico si ambos son números válidos
     if (!isNaN(numA) && !isNaN(numB)) {
       return isAscending ? numA - numB : numB - numA;
     }
 
-    // De lo contrario, ordenar alfabéticamente
+    // Orden alfabético
     valA = valA.toString().toLowerCase();
     valB = valB.toString().toLowerCase();
 
@@ -143,7 +149,6 @@ function applySort() {
   renderTable(filteredData);
 }
 
-// Función auxiliar para obtener valores según la llave de la columna
 function getColumnValue(row, columnKey) {
   if (columnKey === 'META') {
     const metaKey = Object.keys(row).find(k => k.startsWith('META')) || 'META';
@@ -187,5 +192,6 @@ function renderTable(data) {
 // ==========================================
 document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('filter-mes').addEventListener('change', loadDashboardData);
+  setupTableHeaderEvents();
   loadDashboardData();
 });
