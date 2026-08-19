@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard Agentes Low Performance · PERÚ</title>
+  
+  <!-- Estilos propios -->
+  <link rel="stylesheet" href="style.css">
+  
+  <!-- Librerías externas: PapaParse (para leer CSV) y Chart.js (para gráficos) -->
+  <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+
+  <!-- Encabezado / Header -->
+  <header class="header">
+    <h1>UTEL · Dashboard Agentes Low Performance</h1>
+    <p>Seguimiento & Coaching — PERÚ</p>
+  </header>
+
+  <main class="container">
+    <!-- Barra de Filtros -->
+    <section class="filters-card">
+      <h2>Filtros</h2>
+      <div class="filters-grid">
+        <!-- Nuevo filtro de Mes -->
+        <div>
+          <label for="filter-mes">Seleccionar Mes:</label>
+          <select id="filter-mes">
+            <option value="febrero">Febrero 2026</option>
+            <option value="marzo">Marzo 2026</option>
+          </select>
+        </div>
+
+        <!-- Filtro Trainer -->
+        <div>
+          <label for="filter-trainer">Trainer:</label>
+          <select id="filter-trainer"><option value="">Todos</option></select>
+        </div>
+
+        <!-- Filtro Supervisor -->
+        <div>
+          <label for="filter-supervisor">Supervisor:</label>
+          <select id="filter-supervisor"><option value="">Todos</option></select>
+        </div>
+
+        <!-- Filtro Coordinador -->
+        <div>
+          <label for="filter-coordinador">Coordinador:</label>
+          <select id="filter-coordinador"><option value="">Todos</option></select>
+        </div>
+      </div>
+    </section>
+
+    <!-- Tabla de Agentes -->
+    <section class="table-card">
+      <h2>Listado de Agentes</h2>
+      <div class="table-wrapper">
+        <table id="agents-table">
+          <thead>
+            <tr>
+              <th>Agente</th>
+              <th>Trainer</th>
+              <th>Supervisor</th>
+              <th>Coordinador</th>
+              <th>Meta</th>
+              <th>Cierre</th>
+              <th>Cumpl. %</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            <!-- Los datos se cargarán aquí dinámicamente con JS -->
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+
+  <!-- Script con la lógica del dashboard -->
+  <script src="script.js"></script>
+</body>
+</html>
