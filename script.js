@@ -128,16 +128,13 @@ function applySort() {
     let valA = getColumnValue(a, currentSortColumn);
     let valB = getColumnValue(b, currentSortColumn);
 
-    // Limpiar para detectar si son porcentajes o números
     let numA = parseFloat(valA.toString().replace('%', '').replace(',', '.'));
     let numB = parseFloat(valB.toString().replace('%', '').replace(',', '.'));
 
-    // Orden numérico si ambos son números válidos
     if (!isNaN(numA) && !isNaN(numB)) {
       return isAscending ? numA - numB : numB - numA;
     }
 
-    // Orden alfabético
     valA = valA.toString().toLowerCase();
     valB = valB.toString().toLowerCase();
 
@@ -154,23 +151,45 @@ function getColumnValue(row, columnKey) {
     const metaKey = Object.keys(row).find(k => k.startsWith('META')) || 'META';
     return row[metaKey] || 0;
   }
-  return row[columnKey] || '';
+  return row[columnKey] || 0;
 }
 
 // ==========================================
-// 5. RENDERIZADO DE TABLA
+// 5. HELPER PARA SEMÁFORO DE CUMPLIMIENTO
+// ==========================================
+function getComplianceBadge(valueStr) {
+  if (!valueStr) return '<span class="status-dot dot-red"></span>0%';
+  
+  // Limpia el valor quitando '%' y convierte comas en puntos
+  let num = parseFloat(valueStr.toString().replace('%', '').replace(',', '.'));
+  
+  if (isNaN(num)) return valueStr;
+
+  let colorClass = 'dot-red'; // Menor a 50%
+  if (num >= 90) {
+    colorClass = 'dot-green'; // 90% o más
+  } else if (num >= 50) {
+    colorClass = 'dot-yellow'; // Entre 50% y 89.9%
+  }
+
+  return `<span class="status-dot ${colorClass}"></span>${num.toFixed(1)}%`;
+}
+
+// ==========================================
+// 6. RENDERIZADO DE TABLA
 // ==========================================
 function renderTable(data) {
   const tbody = document.querySelector('#agents-table tbody');
   tbody.innerHTML = '';
 
   if (!data || data.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;">No hay datos disponibles.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="13" style="text-align:center;">No hay datos disponibles.</td></tr>';
     return;
   }
 
   data.forEach(row => {
     const metaKey = Object.keys(row).find(k => k.startsWith('META')) || 'META';
+    const complianceHTML = getComplianceBadge(row['CUMPLIMIENTO MES']);
     
     const tr = document.createElement('tr');
     tr.innerHTML = `
@@ -179,8 +198,13 @@ function renderTable(data) {
       <td>${row['SUPERVISOR'] || '-'}</td>
       <td>${row['COORDINADOR'] || '-'}</td>
       <td>${row[metaKey] || '0'}</td>
+      <td>${row['V1'] || '0'}</td>
+      <td>${row['V2'] || '0'}</td>
+      <td>${row['V3'] || '0'}</td>
+      <td>${row['V4'] || '0'}</td>
+      <td>${row['V5'] || '0'}</td>
       <td>${row['CIERRE'] || '0'}</td>
-      <td>${row['CUMPLIMIENTO MES'] || '0%'}</td>
+      <td>${complianceHTML}</td>
       <td>${row['STATUS AGENTE'] || '-'}</td>
     `;
     tbody.appendChild(tr);
@@ -188,7 +212,7 @@ function renderTable(data) {
 }
 
 // ==========================================
-// 6. INICIALIZACIÓN
+// 7. INICIALIZACIÓN
 // ==========================================
 document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('filter-mes').addEventListener('change', loadDashboardData);

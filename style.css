@@ -101,3 +101,25 @@ th {
 th:hover {
   background-color: #e2e8f0;
 }
+
+/* Indicadores de color para Cumplimiento */
+.status-dot {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  margin-right: 8px;
+}
+
+.dot-red {
+  background-color: #ef4444; /* Rojo */
+}
+
+.dot-yellow {
+  background-color: #f59e0b; /* Amarillo */
+}
+
+.dot-green {
+  background-color: #10b981; /* Verde */
+}
+
