@@ -6,6 +6,7 @@ const MONTH_URLS = {
   marzo: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRlckyPnPqEGlq9J9wk_1HwxkfHQqt6X4wHxNtPpRg-RRATO3asLAigUxUyin9D1OS0joXIpJkG8-tL/pub?gid=397555912&single=true&output=csv'
 };
 
+let allMonthsData = {}; // Almacena los datos crudos por mes
 let rawData = [];
 let filteredData = [];
 
@@ -16,37 +17,85 @@ let isAscending = true;
 // ==========================================
 // 2. DESCARGA Y PROCESAMIENTO DE DATOS
 // ==========================================
+// Carga inicial de todos los meses para mapear la presencia del agente
+async function preloadAllMonths() {
+  const monthKeys = Object.keys(MONTH_URLS);
+  
+  const promises = monthKeys.map(month => {
+    return new Promise((resolve) => {
+      Papa.parse(MONTH_URLS[month], {
+        download: true,
+        header: true,
+        skipEmptyLines: true,
+        transformHeader: h => h.trim(),
+        complete: results => resolve({ month, data: results.data }),
+        error: () => resolve({ month, data: [] })
+      });
+    });
+  });
+
+  const results = await Promise.all(promises);
+  results.forEach(res => {
+    allMonthsData[res.month] = res.data;
+  });
+
+  loadDashboardData();
+}
+
 function loadDashboardData() {
   const selectedMonth = document.getElementById('filter-mes').value;
-  const csvUrl = MONTH_URLS[selectedMonth];
+  rawData = allMonthsData[selectedMonth] || [];
 
-  if (!csvUrl) {
-    console.error("No hay una URL configurada para el mes seleccionado:", selectedMonth);
-    return;
-  }
+  // Calcular meses de permanencia para cada agente en los datos activos
+  const agentMonthsMap = buildAgentMonthsMap();
 
-  Papa.parse(csvUrl, {
-    download: true,
-    header: true,
-    skipEmptyLines: true,
-    transformHeader: function(h) {
-      return h.trim();
-    },
-    complete: function(results) {
-      rawData = results.data;
-      filteredData = [...rawData];
-      
-      resetSelect('filter-trainer');
-      resetSelect('filter-supervisor');
-      resetSelect('filter-coordinador');
-      
-      populateFilters(rawData);
-      renderTable(filteredData);
-    },
-    error: function(err) {
-      console.error("Error al cargar los datos desde Google Sheets:", err);
-    }
+  rawData = rawData.map(row => {
+    const agentName = row['PROMOTOR'] ? row['PROMOTOR'].trim().toUpperCase() : '';
+    const activeMonths = agentMonthsMap[agentName] || [];
+    
+    // Formato de texto: "Febrero, Marzo" o capitalizado
+    const formattedMonths = activeMonths
+      .map(m => m.charAt(0).toUpperCase() + m.slice(1))
+      .join(', ');
+
+    return {
+      ...row,
+      'MESES_ACTIVO': formattedMonths || '-'
+    };
   });
+
+  filteredData = [...rawData];
+
+  resetSelect('filter-trainer');
+  resetSelect('filter-supervisor');
+  resetSelect('filter-coordinador');
+
+  populateFilters(rawData);
+  
+  if (currentSortColumn) {
+    applySort();
+  } else {
+    renderTable(filteredData);
+  }
+}
+
+// Crea un mapeo { "NOMBRE AGENTE": ["febrero", "marzo"] }
+function buildAgentMonthsMap() {
+  const map = {};
+  
+  Object.keys(allMonthsData).forEach(month => {
+    allMonthsData[month].forEach(row => {
+      const agent = row['PROMOTOR'] ? row['PROMOTOR'].trim().toUpperCase() : null;
+      if (agent) {
+        if (!map[agent]) map[agent] = [];
+        if (!map[agent].includes(month)) {
+          map[agent].push(month);
+        }
+      }
+    });
+  });
+
+  return map;
 }
 
 function resetSelect(elementId) {
@@ -160,16 +209,14 @@ function getColumnValue(row, columnKey) {
 function getComplianceBadge(valueStr) {
   if (!valueStr) return '<span class="status-dot dot-red"></span>0%';
   
-  // Limpia el valor quitando '%' y convierte comas en puntos
   let num = parseFloat(valueStr.toString().replace('%', '').replace(',', '.'));
-  
   if (isNaN(num)) return valueStr;
 
-  let colorClass = 'dot-red'; // Menor a 50%
+  let colorClass = 'dot-red';
   if (num >= 90) {
-    colorClass = 'dot-green'; // 90% o más
+    colorClass = 'dot-green';
   } else if (num >= 50) {
-    colorClass = 'dot-yellow'; // Entre 50% y 89.9%
+    colorClass = 'dot-yellow';
   }
 
   return `<span class="status-dot ${colorClass}"></span>${num.toFixed(1)}%`;
@@ -183,7 +230,7 @@ function renderTable(data) {
   tbody.innerHTML = '';
 
   if (!data || data.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="13" style="text-align:center;">No hay datos disponibles.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="14" style="text-align:center;">No hay datos disponibles.</td></tr>';
     return;
   }
 
@@ -206,6 +253,7 @@ function renderTable(data) {
       <td>${row['CIERRE'] || '0'}</td>
       <td>${complianceHTML}</td>
       <td>${row['STATUS AGENTE'] || '-'}</td>
+      <td>${row['MESES_ACTIVO'] || '-'}</td>
     `;
     tbody.appendChild(tr);
   });
@@ -217,5 +265,5 @@ function renderTable(data) {
 document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('filter-mes').addEventListener('change', loadDashboardData);
   setupTableHeaderEvents();
-  loadDashboardData();
+  preloadAllMonths();
 });
