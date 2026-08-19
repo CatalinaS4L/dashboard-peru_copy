@@ -25,12 +25,11 @@
     <section class="filters-card">
       <h2>Filtros</h2>
       <div class="filters-grid">
-        <!-- Nuevo filtro de Mes -->
+        <!-- Filtro de Mes -->
         <div>
           <label for="filter-mes">Seleccionar Mes:</label>
           <select id="filter-mes">
-            <option value="febrero">Febrero 2026</option>
-            <option value="marzo">Marzo 2026</option>
+            <option value="todos">Todos los meses</option>
           </select>
         </div>
 
@@ -50,6 +49,12 @@
         <div>
           <label for="filter-coordinador">Coordinador:</label>
           <select id="filter-coordinador"><option value="">Todos</option></select>
+        </div>
+
+        <!-- Botón Limpiar Filtros -->
+        <div class="filter-actions">
+          <label>&nbsp;</label>
+          <button id="btn-reset" type="button">Limpiar Filtros</button>
         </div>
       </div>
     </section>

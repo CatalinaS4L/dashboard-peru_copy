@@ -123,3 +123,20 @@ th:hover {
   background-color: #10b981; /* Verde */
 }
 
+/* Estilo del botón Limpiar Filtros */
+.filter-actions button {
+  width: 100%;
+  padding: 8px 12px;
+  background-color: #64748b;
+  color: #ffffff;
+  border: none;
+  border-radius: 4px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.filter-actions button:hover {
+  background-color: #475569;
+}
+

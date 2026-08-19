@@ -6,18 +6,32 @@ const MONTH_URLS = {
   marzo: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRlckyPnPqEGlq9J9wk_1HwxkfHQqt6X4wHxNtPpRg-RRATO3asLAigUxUyin9D1OS0joXIpJkG8-tL/pub?gid=397555912&single=true&output=csv'
 };
 
-let allMonthsData = {}; // Almacena los datos crudos por mes
+let allMonthsData = {};
 let rawData = [];
 let filteredData = [];
 
-// Control del estado de ordenamiento
 let currentSortColumn = null;
 let isAscending = true;
 
 // ==========================================
-// 2. DESCARGA Y PROCESAMIENTO DE DATOS
+// 2. CONSTRUCCIÓN Y CARGA DE DATOS
 // ==========================================
-// Carga inicial de todos los meses para mapear la presencia del agente
+
+// AQUÍ AÑADES LA FUNCIÓN:
+function populateMonthSelector() {
+  const selectMes = document.getElementById('filter-mes');
+  
+  Object.keys(MONTH_URLS).forEach(monthKey => {
+    if (!selectMes.querySelector(`option[value="${monthKey}"]`)) {
+      const option = document.createElement('option');
+      option.value = monthKey;
+      const formattedName = monthKey.charAt(0).toUpperCase() + monthKey.slice(1);
+      option.textContent = `${formattedName} 2026`;
+      selectMes.appendChild(option);
+    }
+  });
+}
+
 async function preloadAllMonths() {
   const monthKeys = Object.keys(MONTH_URLS);
   
@@ -44,16 +58,20 @@ async function preloadAllMonths() {
 
 function loadDashboardData() {
   const selectedMonth = document.getElementById('filter-mes').value;
-  rawData = allMonthsData[selectedMonth] || [];
-
-  // Calcular meses de permanencia para cada agente en los datos activos
   const agentMonthsMap = buildAgentMonthsMap();
+
+  if (selectedMonth === 'todos') {
+    rawData = [];
+    Object.keys(allMonthsData).forEach(m => {
+      rawData = rawData.concat(allMonthsData[m]);
+    });
+  } else {
+    rawData = allMonthsData[selectedMonth] || [];
+  }
 
   rawData = rawData.map(row => {
     const agentName = row['PROMOTOR'] ? row['PROMOTOR'].trim().toUpperCase() : '';
     const activeMonths = agentMonthsMap[agentName] || [];
-    
-    // Formato de texto: "Febrero, Marzo" o capitalizado
     const formattedMonths = activeMonths
       .map(m => m.charAt(0).toUpperCase() + m.slice(1))
       .join(', ');
@@ -71,7 +89,7 @@ function loadDashboardData() {
   resetSelect('filter-coordinador');
 
   populateFilters(rawData);
-  
+
   if (currentSortColumn) {
     applySort();
   } else {
@@ -79,10 +97,8 @@ function loadDashboardData() {
   }
 }
 
-// Crea un mapeo { "NOMBRE AGENTE": ["febrero", "marzo"] }
 function buildAgentMonthsMap() {
   const map = {};
-  
   Object.keys(allMonthsData).forEach(month => {
     allMonthsData[month].forEach(row => {
       const agent = row['PROMOTOR'] ? row['PROMOTOR'].trim().toUpperCase() : null;
@@ -94,7 +110,6 @@ function buildAgentMonthsMap() {
       }
     });
   });
-
   return map;
 }
 
@@ -104,7 +119,7 @@ function resetSelect(elementId) {
 }
 
 // ==========================================
-// 3. LÓGICA DE FILTROS
+// 3. LÓGICA DE FILTROS Y REINICIO
 // ==========================================
 function populateFilters(data) {
   const trainers = [...new Set(data.map(item => item['TRAINER']).filter(Boolean))];
@@ -148,6 +163,18 @@ function filterData() {
   } else {
     renderTable(filteredData);
   }
+}
+
+function resetAllFilters() {
+  document.getElementById('filter-mes').value = 'todos';
+  document.getElementById('filter-trainer').value = '';
+  document.getElementById('filter-supervisor').value = '';
+  document.getElementById('filter-coordinador').value = '';
+
+  currentSortColumn = null;
+  isAscending = true;
+
+  loadDashboardData();
 }
 
 // ==========================================
@@ -204,7 +231,7 @@ function getColumnValue(row, columnKey) {
 }
 
 // ==========================================
-// 5. HELPER PARA SEMÁFORO DE CUMPLIMIENTO
+// 5. HELPER DE CUMPLIMIENTO (SEMÁFORO)
 // ==========================================
 function getComplianceBadge(valueStr) {
   if (!valueStr) return '<span class="status-dot dot-red"></span>0%';
@@ -263,7 +290,9 @@ function renderTable(data) {
 // 7. INICIALIZACIÓN
 // ==========================================
 document.addEventListener('DOMContentLoaded', () => {
+  populateMonthSelector(); // <--- SE EJECUTA AQUÍ AL INICIAR
   document.getElementById('filter-mes').addEventListener('change', loadDashboardData);
+  document.getElementById('btn-reset').addEventListener('click', resetAllFilters);
   setupTableHeaderEvents();
   preloadAllMonths();
 });
