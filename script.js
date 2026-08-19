@@ -7,6 +7,11 @@ const MONTH_URLS = {
 };
 
 let rawData = [];
+let filteredData = []; // Datos filtrados sobre los que se aplicará el ordenamiento
+
+// Control del estado de ordenamiento
+let currentSortColumn = null;
+let isAscending = true;
 
 // ==========================================
 // 2. DESCARGA Y PROCESAMIENTO DE DATOS
@@ -20,24 +25,23 @@ function loadDashboardData() {
     return;
   }
 
-  // PapaParse descarga y limpia el CSV
   Papa.parse(csvUrl, {
     download: true,
     header: true,
     skipEmptyLines: true,
     transformHeader: function(h) {
-      return h.trim(); // Quita espacios al inicio o final del nombre de las columnas
+      return h.trim();
     },
     complete: function(results) {
       rawData = results.data;
-      console.log(`Datos de ${selectedMonth} cargados exitosamente:`, rawData);
+      filteredData = [...rawData]; // Inicializar copia para filtrado
       
       resetSelect('filter-trainer');
       resetSelect('filter-supervisor');
       resetSelect('filter-coordinador');
       
       populateFilters(rawData);
-      renderTable(rawData);
+      renderTable(filteredData);
     },
     error: function(err) {
       console.error("Error al cargar los datos desde Google Sheets:", err);
@@ -83,18 +87,73 @@ function filterData() {
   const supervisorVal = document.getElementById('filter-supervisor').value;
   const coordinadorVal = document.getElementById('filter-coordinador').value;
 
-  const filtered = rawData.filter(item => {
+  filteredData = rawData.filter(item => {
     const matchTrainer = !trainerVal || item['TRAINER'] === trainerVal;
     const matchSupervisor = !supervisorVal || item['SUPERVISOR'] === supervisorVal;
     const matchCoordinador = !coordinadorVal || item['COORDINADOR'] === coordinadorVal;
     return matchTrainer && matchSupervisor && matchCoordinador;
   });
 
-  renderTable(filtered);
+  // Re-aplicar orden previo si existía
+  if (currentSortColumn) {
+    applySort();
+  } else {
+    renderTable(filteredData);
+  }
 }
 
 // ==========================================
-// 4. RENDERIZADO DE TABLA
+// 4. FUNCIÓN DE ORDENAMIENTO (ASC / DESC)
+// ==========================================
+function sortTable(columnKey) {
+  // Si vuelve a hacer clic en la misma columna, invierte el orden (ASC -> DESC -> ASC)
+  if (currentSortColumn === columnKey) {
+    isAscending = !isAscending;
+  } else {
+    currentSortColumn = columnKey;
+    isAscending = true;
+  }
+
+  applySort();
+}
+
+function applySort() {
+  filteredData.sort((a, b) => {
+    let valA = getColumnValue(a, currentSortColumn);
+    let valB = getColumnValue(b, currentSortColumn);
+
+    // Limpieza de valores para comparación numérica o porcentaje
+    let numA = parseFloat(valA.toString().replace('%', '').replace(',', '.'));
+    let numB = parseFloat(valB.toString().replace('%', '').replace(',', '.'));
+
+    // Si ambos son números válidos, ordenar numéricamente
+    if (!isNaN(numA) && !isNaN(numB)) {
+      return isAscending ? numA - numB : numB - numA;
+    }
+
+    // De lo contrario, ordenar alfabéticamente
+    valA = valA.toString().toLowerCase();
+    valB = valB.toString().toLowerCase();
+
+    if (valA < valB) return isAscending ? -1 : 1;
+    if (valA > valB) return isAscending ? 1 : -1;
+    return 0;
+  });
+
+  renderTable(filteredData);
+}
+
+// Función auxiliar para obtener valores según la llave de la columna
+function getColumnValue(row, columnKey) {
+  if (columnKey === 'META') {
+    const metaKey = Object.keys(row).find(k => k.startsWith('META')) || 'META';
+    return row[metaKey] || 0;
+  }
+  return row[columnKey] || '';
+}
+
+// ==========================================
+// 5. RENDERIZADO DE TABLA
 // ==========================================
 function renderTable(data) {
   const tbody = document.querySelector('#agents-table tbody');
@@ -106,7 +165,6 @@ function renderTable(data) {
   }
 
   data.forEach(row => {
-    // Busca automáticamente cualquier columna que empiece por META
     const metaKey = Object.keys(row).find(k => k.startsWith('META')) || 'META';
     
     const tr = document.createElement('tr');
@@ -125,7 +183,7 @@ function renderTable(data) {
 }
 
 // ==========================================
-// 5. INICIALIZACIÓN
+// 6. INICIALIZACIÓN
 // ==========================================
 document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('filter-mes').addEventListener('change', loadDashboardData);

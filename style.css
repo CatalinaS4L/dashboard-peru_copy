@@ -92,3 +92,12 @@ th {
 tr:hover {
   background-color: #f1f5f9;
 }
+
+th {
+  cursor: pointer;
+  user-select: none;
+}
+
+th:hover {
+  background-color: #e2e8f0;
+}
