@@ -16,8 +16,6 @@ let isAscending = true;
 // ==========================================
 // 2. CONSTRUCCIÓN Y CARGA DE DATOS
 // ==========================================
-
-// AQUÍ AÑADES LA FUNCIÓN:
 function populateMonthSelector() {
   const selectMes = document.getElementById('filter-mes');
   
@@ -95,6 +93,9 @@ function loadDashboardData() {
   } else {
     renderTable(filteredData);
   }
+
+  // Renderiza también la tabla de líderes
+  renderLeadersTable(filteredData);
 }
 
 function buildAgentMonthsMap() {
@@ -163,6 +164,8 @@ function filterData() {
   } else {
     renderTable(filteredData);
   }
+
+  renderLeadersTable(filteredData);
 }
 
 function resetAllFilters() {
@@ -178,7 +181,23 @@ function resetAllFilters() {
 }
 
 // ==========================================
-// 4. LÓGICA DE ORDENAMIENTO (ASC / DESC)
+// 4. CAMBIO DE PESTAÑAS (TABS)
+// ==========================================
+function switchTab(tabName) {
+  document.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
+  document.querySelectorAll('.tab-content').forEach(content => content.style.display = 'none');
+
+  if (tabName === 'agents') {
+    document.getElementById('tab-agents').style.display = 'block';
+    event.target.classList.add('active');
+  } else if (tabName === 'leaders') {
+    document.getElementById('tab-leaders').style.display = 'block';
+    event.target.classList.add('active');
+  }
+}
+
+// ==========================================
+// 5. ORDENAMIENTO DE TABLA AGENTES
 // ==========================================
 function setupTableHeaderEvents() {
   const headers = document.querySelectorAll('#agents-table th');
@@ -230,9 +249,6 @@ function getColumnValue(row, columnKey) {
   return row[columnKey] || 0;
 }
 
-// ==========================================
-// 5. HELPER DE CUMPLIMIENTO (SEMÁFORO)
-// ==========================================
 function getComplianceBadge(valueStr) {
   if (!valueStr) return '<span class="status-dot dot-red"></span>0%';
   
@@ -250,7 +266,7 @@ function getComplianceBadge(valueStr) {
 }
 
 // ==========================================
-// 6. RENDERIZADO DE TABLA
+// 6. RENDERIZADO TABLA AGENTES
 // ==========================================
 function renderTable(data) {
   const tbody = document.querySelector('#agents-table tbody');
@@ -287,10 +303,81 @@ function renderTable(data) {
 }
 
 // ==========================================
-// 7. INICIALIZACIÓN
+// 7. RENDERIZADO TABLA LÍDERES (ACUMULATIVO)
+// ==========================================
+function parseNum(val) {
+  if (!val) return 0;
+  let num = parseFloat(val.toString().replace('%', '').replace(',', '.'));
+  return isNaN(num) ? 0 : num;
+}
+
+function renderLeadersTable(data) {
+  const tbody = document.querySelector('#leaders-table tbody');
+  tbody.innerHTML = '';
+
+  if (!data || data.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;">No hay datos disponibles.</td></tr>';
+    return;
+  }
+
+  // Agrupar por Supervisor
+  const leadersMap = {};
+
+  data.forEach(row => {
+    const supervisor = row['SUPERVISOR'] ? row['SUPERVISOR'].trim() : 'Sin Supervisor';
+    const metaKey = Object.keys(row).find(k => k.startsWith('META')) || 'META';
+
+    if (!leadersMap[supervisor]) {
+      leadersMap[supervisor] = {
+        agentsCount: 0,
+        metaTotal: 0,
+        v1: 0,
+        v2: 0,
+        v3: 0,
+        v4: 0,
+        v5: 0,
+        cierre: 0
+      };
+    }
+
+    leadersMap[supervisor].agentsCount += 1;
+    leadersMap[supervisor].metaTotal += parseNum(row[metaKey]);
+    leadersMap[supervisor].v1 += parseNum(row['V1']);
+    leadersMap[supervisor].v2 += parseNum(row['V2']);
+    leadersMap[supervisor].v3 += parseNum(row['V3']);
+    leadersMap[supervisor].v4 += parseNum(row['V4']);
+    leadersMap[supervisor].v5 += parseNum(row['V5']);
+    leadersMap[supervisor].cierre += parseNum(row['CIERRE']);
+  });
+
+  // Generar filas
+  Object.keys(leadersMap).sort().forEach(supervisor => {
+    const l = leadersMap[supervisor];
+    const compliancePct = l.metaTotal > 0 ? ((l.cierre / l.metaTotal) * 100) : 0;
+    const complianceHTML = getComplianceBadge(compliancePct.toString());
+
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td><strong>${supervisor}</strong></td>
+      <td>${l.agentsCount}</td>
+      <td>${l.metaTotal}</td>
+      <td>${l.v1}</td>
+      <td>${l.v2}</td>
+      <td>${l.v3}</td>
+      <td>${l.v4}</td>
+      <td>${l.v5}</td>
+      <td><strong>${l.cierre}</strong></td>
+      <td>${complianceHTML}</td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+// ==========================================
+// 8. INICIALIZACIÓN
 // ==========================================
 document.addEventListener('DOMContentLoaded', () => {
-  populateMonthSelector(); // <--- SE EJECUTA AQUÍ AL INICIAR
+  populateMonthSelector();
   document.getElementById('filter-mes').addEventListener('change', loadDashboardData);
   document.getElementById('btn-reset').addEventListener('click', resetAllFilters);
   setupTableHeaderEvents();
