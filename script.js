@@ -1,7 +1,7 @@
 // ==========================================
-// 1. CONFIGURACIÓN DE ENLACES POR MES (Con anti-caché)
+// 1. CONFIGURACIÓN DE ENLACES POR MES (Anti-Caché)
 // ==========================================
-const timestamp = new Date().getTime(); // Crea un identificador único por segundo
+const timestamp = new Date().getTime();
 
 const MONTH_URLS = {
   febrero: `https://docs.google.com/spreadsheets/d/e/2PACX-1vRlckyPnPqEGlq9J9wk_1HwxkfHQqt6X4wHxNtPpRg-RRATO3asLAigUxUyin9D1OS0joXIpJkG8-tL/pub?gid=0&single=true&output=csv&_cb=${timestamp}`,
@@ -12,8 +12,12 @@ let allMonthsData = {};
 let rawData = [];
 let filteredData = [];
 
-let currentSortColumn = null;
-let isAscending = true;
+// Estado de ordenamiento para cada tabla
+let sortState = {
+  'agents-table': { column: null, isAsc: true },
+  'supervisors-table': { column: null, isAsc: true },
+  'coordinators-table': { column: null, isAsc: true }
+};
 
 // ==========================================
 // 2. CONSTRUCCIÓN Y CARGA DE DATOS
@@ -89,9 +93,12 @@ function loadDashboardData() {
   resetSelect('filter-coordinador');
 
   populateFilters(rawData);
+  renderAllTables();
+}
 
-  if (currentSortColumn) {
-    applySort();
+function renderAllTables() {
+  if (sortState['agents-table'].column) {
+    applyAgentSort();
   } else {
     renderTable(filteredData);
   }
@@ -160,13 +167,7 @@ function filterData() {
     return matchTrainer && matchSupervisor && matchCoordinador;
   });
 
-  if (currentSortColumn) {
-    applySort();
-  } else {
-    renderTable(filteredData);
-  }
-
-  renderLeadersTables(filteredData);
+  renderAllTables();
 }
 
 function resetAllFilters() {
@@ -175,8 +176,9 @@ function resetAllFilters() {
   document.getElementById('filter-supervisor').value = '';
   document.getElementById('filter-coordinador').value = '';
 
-  currentSortColumn = null;
-  isAscending = true;
+  Object.keys(sortState).forEach(tableId => {
+    sortState[tableId] = { column: null, isAsc: true };
+  });
 
   loadDashboardData();
 }
@@ -194,7 +196,6 @@ function switchTab(tabName, evt) {
     document.getElementById('tab-leaders').style.display = 'block';
   }
 
-  // Activar el botón presionado de forma segura
   if (evt && evt.currentTarget) {
     evt.currentTarget.classList.add('active');
   } else if (window.event && window.event.target) {
@@ -203,44 +204,57 @@ function switchTab(tabName, evt) {
 }
 
 // ==========================================
-// 5. ORDENAMIENTO DE TABLA AGENTES
+// 5. SISTEMA GENERAL DE ORDENAMIENTO DE TABLAS
 // ==========================================
 function setupTableHeaderEvents() {
-  const headers = document.querySelectorAll('#agents-table th');
-  headers.forEach(header => {
-    header.addEventListener('click', () => {
-      const columnKey = header.getAttribute('data-column');
-      if (!columnKey) return;
+  const tables = ['agents-table', 'supervisors-table', 'coordinators-table'];
 
-      if (currentSortColumn === columnKey) {
-        isAscending = !isAscending;
-      } else {
-        currentSortColumn = columnKey;
-        isAscending = true;
-      }
+  tables.forEach(tableId => {
+    const headers = document.querySelectorAll(`#${tableId} th`);
+    headers.forEach(header => {
+      header.addEventListener('click', () => {
+        const columnKey = header.getAttribute('data-column');
+        if (!columnKey) return;
 
-      applySort();
+        const current = sortState[tableId];
+        if (current.column === columnKey) {
+          current.isAsc = !current.isAsc;
+        } else {
+          current.column = columnKey;
+          current.isAsc = true;
+        }
+
+        if (tableId === 'agents-table') {
+          applyAgentSort();
+        } else if (tableId === 'supervisors-table') {
+          renderGroupedTable(filteredData, 'SUPERVISOR', '#supervisors-table tbody', 'supervisors-table');
+        } else if (tableId === 'coordinators-table') {
+          renderGroupedTable(filteredData, 'COORDINADOR', '#coordinators-table tbody', 'coordinators-table');
+        }
+      });
     });
   });
 }
 
-function applySort() {
+function applyAgentSort() {
+  const { column, isAsc } = sortState['agents-table'];
+
   filteredData.sort((a, b) => {
-    let valA = getColumnValue(a, currentSortColumn);
-    let valB = getColumnValue(b, currentSortColumn);
+    let valA = getColumnValue(a, column);
+    let valB = getColumnValue(b, column);
 
     let numA = parseFloat(valA.toString().replace('%', '').replace(',', '.'));
     let numB = parseFloat(valB.toString().replace('%', '').replace(',', '.'));
 
     if (!isNaN(numA) && !isNaN(numB)) {
-      return isAscending ? numA - numB : numB - numA;
+      return isAsc ? numA - numB : numB - numA;
     }
 
     valA = valA.toString().toLowerCase();
     valB = valB.toString().toLowerCase();
 
-    if (valA < valB) return isAscending ? -1 : 1;
-    if (valA > valB) return isAscending ? 1 : -1;
+    if (valA < valB) return isAsc ? -1 : 1;
+    if (valA > valB) return isAsc ? 1 : -1;
     return 0;
   });
 
@@ -318,11 +332,11 @@ function parseNum(val) {
 }
 
 function renderLeadersTables(data) {
-  renderGroupedTable(data, 'SUPERVISOR', '#supervisors-table tbody');
-  renderGroupedTable(data, 'COORDINADOR', '#coordinators-table tbody');
+  renderGroupedTable(data, 'SUPERVISOR', '#supervisors-table tbody', 'supervisors-table');
+  renderGroupedTable(data, 'COORDINADOR', '#coordinators-table tbody', 'coordinators-table');
 }
 
-function renderGroupedTable(data, groupKey, selector) {
+function renderGroupedTable(data, groupKey, selector, tableId) {
   const tbody = document.querySelector(selector);
   tbody.innerHTML = '';
 
@@ -334,15 +348,18 @@ function renderGroupedTable(data, groupKey, selector) {
   const groupMap = {};
 
   data.forEach(row => {
-    const leader = row[groupKey] ? row[groupKey].trim() : `Sin ${groupKey.toLowerCase()}`;
-    const metaKey = Object.keys(row).find(k => k.startsWith('META')) || 'META';
+    const actualKey = Object.keys(row).find(k => k.trim().toUpperCase() === groupKey.toUpperCase());
+    const leader = (actualKey && row[actualKey]) ? row[actualKey].trim() : `Sin ${groupKey.toLowerCase()}`;
+    const metaKey = Object.keys(row).find(k => k.trim().toUpperCase().startsWith('META')) || 'META';
 
     if (!groupMap[leader]) {
       groupMap[leader] = {
+        leader: leader,
         agentsCount: 0,
         metaTotal: 0,
         v1: 0, v2: 0, v3: 0, v4: 0, v5: 0,
-        cierre: 0
+        cierre: 0,
+        compliancePct: 0
       };
     }
 
@@ -356,14 +373,42 @@ function renderGroupedTable(data, groupKey, selector) {
     groupMap[leader].cierre += parseNum(row['CIERRE']);
   });
 
-  Object.keys(groupMap).sort().forEach(leader => {
-    const l = groupMap[leader];
-    const compliancePct = l.metaTotal > 0 ? ((l.cierre / l.metaTotal) * 100) : 0;
-    const complianceHTML = getComplianceBadge(compliancePct.toString());
+  let leadersList = Object.values(groupMap);
+
+  // Calcular el porcentaje final para ordenar correctamente por cumplimiento
+  leadersList.forEach(l => {
+    l.compliancePct = l.metaTotal > 0 ? ((l.cierre / l.metaTotal) * 100) : 0;
+  });
+
+  // Aplicar ordenamiento dinámico si la tabla tiene una columna seleccionada
+  const sortInfo = sortState[tableId];
+  if (sortInfo && sortInfo.column) {
+    const col = sortInfo.column;
+    const isAsc = sortInfo.isAsc;
+
+    leadersList.sort((a, b) => {
+      let valA = a[col];
+      let valB = b[col];
+
+      if (typeof valA === 'number' && typeof valB === 'number') {
+        return isAsc ? valA - valB : valB - valA;
+      }
+
+      valA = valA.toString().toLowerCase();
+      valB = valB.toString().toLowerCase();
+
+      if (valA < valB) return isAsc ? -1 : 1;
+      if (valA > valB) return isAsc ? 1 : -1;
+      return 0;
+    });
+  }
+
+  leadersList.forEach(l => {
+    const complianceHTML = getComplianceBadge(l.compliancePct.toString());
 
     const tr = document.createElement('tr');
     tr.innerHTML = `
-      <td><strong>${leader}</strong></td>
+      <td><strong>${l.leader}</strong></td>
       <td>${l.agentsCount}</td>
       <td>${l.metaTotal}</td>
       <td>${l.v1}</td>
