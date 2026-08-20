@@ -206,34 +206,24 @@ function switchTab(tabName, evt) {
 // ==========================================
 // 5. SISTEMA GENERAL DE ORDENAMIENTO DE TABLAS
 // ==========================================
-function setupTableHeaderEvents() {
-  const tables = ['agents-table', 'supervisors-table', 'coordinators-table'];
+function handleSort(tableId, columnKey) {
+  const current = sortState[tableId];
+  if (!current) return;
 
-  tables.forEach(tableId => {
-    const headers = document.querySelectorAll(`#${tableId} th`);
-    headers.forEach(header => {
-      header.addEventListener('click', () => {
-        const columnKey = header.getAttribute('data-column');
-        if (!columnKey) return;
+  if (current.column === columnKey) {
+    current.isAsc = !current.isAsc;
+  } else {
+    current.column = columnKey;
+    current.isAsc = true;
+  }
 
-        const current = sortState[tableId];
-        if (current.column === columnKey) {
-          current.isAsc = !current.isAsc;
-        } else {
-          current.column = columnKey;
-          current.isAsc = true;
-        }
-
-        if (tableId === 'agents-table') {
-          applyAgentSort();
-        } else if (tableId === 'supervisors-table') {
-          renderGroupedTable(filteredData, 'SUPERVISOR', '#supervisors-table tbody', 'supervisors-table');
-        } else if (tableId === 'coordinators-table') {
-          renderGroupedTable(filteredData, 'COORDINADOR', '#coordinators-table tbody', 'coordinators-table');
-        }
-      });
-    });
-  });
+  if (tableId === 'agents-table') {
+    applyAgentSort();
+  } else if (tableId === 'supervisors-table') {
+    renderGroupedTable(filteredData, 'SUPERVISOR', '#supervisors-table tbody', 'supervisors-table');
+  } else if (tableId === 'coordinators-table') {
+    renderGroupedTable(filteredData, 'COORDINADOR', '#coordinators-table tbody', 'coordinators-table');
+  }
 }
 
 function applyAgentSort() {
@@ -375,12 +365,10 @@ function renderGroupedTable(data, groupKey, selector, tableId) {
 
   let leadersList = Object.values(groupMap);
 
-  // Calcular el porcentaje final para ordenar correctamente por cumplimiento
   leadersList.forEach(l => {
     l.compliancePct = l.metaTotal > 0 ? ((l.cierre / l.metaTotal) * 100) : 0;
   });
 
-  // Aplicar ordenamiento dinámico si la tabla tiene una columna seleccionada
   const sortInfo = sortState[tableId];
   if (sortInfo && sortInfo.column) {
     const col = sortInfo.column;
@@ -430,6 +418,5 @@ document.addEventListener('DOMContentLoaded', () => {
   populateMonthSelector();
   document.getElementById('filter-mes').addEventListener('change', loadDashboardData);
   document.getElementById('btn-reset').addEventListener('click', resetAllFilters);
-  setupTableHeaderEvents();
   preloadAllMonths();
 });

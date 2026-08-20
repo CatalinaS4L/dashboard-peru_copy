@@ -56,27 +56,27 @@
       </div>
     </section>
 
-    <!-- 3. TAB 1: Tabla de Agentes -->
+<!-- 3. TAB 1: Tabla de Agentes -->
     <section id="tab-agents" class="table-card tab-content active">
       <h2>Listado de Agentes</h2>
       <div class="table-wrapper">
         <table id="agents-table">
           <thead>
             <tr>
-              <th data-column="PROMOTOR">Agente ↕</th>
-              <th data-column="TRAINER">Trainer ↕</th>
-              <th data-column="SUPERVISOR">Supervisor ↕</th>
-              <th data-column="COORDINADOR">Coordinador ↕</th>
-              <th data-column="META">Meta ↕</th>
-              <th data-column="V1">V1 ↕</th>
-              <th data-column="V2">V2 ↕</th>
-              <th data-column="V3">V3 ↕</th>
-              <th data-column="V4">V4 ↕</th>
-              <th data-column="V5">V5 ↕</th>
-              <th data-column="CIERRE">Cierre ↕</th>
-              <th data-column="CUMPLIMIENTO MES">Cumpl. % ↕</th>
-              <th data-column="STATUS AGENTE">Status ↕</th>
-              <th data-column="MESES_ACTIVO">Mes(es) ↕</th>
+              <th onclick="handleSort('agents-table', 'PROMOTOR')">Agente ↕</th>
+              <th onclick="handleSort('agents-table', 'TRAINER')">Trainer ↕</th>
+              <th onclick="handleSort('agents-table', 'SUPERVISOR')">Supervisor ↕</th>
+              <th onclick="handleSort('agents-table', 'COORDINADOR')">Coordinador ↕</th>
+              <th onclick="handleSort('agents-table', 'META')">Meta ↕</th>
+              <th onclick="handleSort('agents-table', 'V1')">V1 ↕</th>
+              <th onclick="handleSort('agents-table', 'V2')">V2 ↕</th>
+              <th onclick="handleSort('agents-table', 'V3')">V3 ↕</th>
+              <th onclick="handleSort('agents-table', 'V4')">V4 ↕</th>
+              <th onclick="handleSort('agents-table', 'V5')">V5 ↕</th>
+              <th onclick="handleSort('agents-table', 'CIERRE')">Cierre ↕</th>
+              <th onclick="handleSort('agents-table', 'CUMPLIMIENTO MES')">Cumpl. % ↕</th>
+              <th onclick="handleSort('agents-table', 'STATUS AGENTE')">Status ↕</th>
+              <th onclick="handleSort('agents-table', 'MESES_ACTIVO')">Mes(es) ↕</th>
             </tr>
           </thead>
           <tbody></tbody>
@@ -84,7 +84,7 @@
       </div>
     </section>
 
-<!-- 4. TAB 2: Acumulativos por Líder (Supervisor y Coordinador) -->
+    <!-- 4. TAB 2: Acumulativos por Líder (Supervisor y Coordinador) -->
     <section id="tab-leaders" class="tab-content" style="display: none;">
       <!-- Tabla por Supervisor -->
       <div class="table-card" style="margin-bottom: 25px;">
@@ -93,16 +93,16 @@
           <table id="supervisors-table">
             <thead>
               <tr>
-                <th data-column="leader">Supervisor ↕</th>
-                <th data-column="agentsCount">Agentes a Cargo ↕</th>
-                <th data-column="metaTotal">Meta Total ↕</th>
-                <th data-column="v1">V1 ↕</th>
-                <th data-column="v2">V2 ↕</th>
-                <th data-column="v3">V3 ↕</th>
-                <th data-column="v4">V4 ↕</th>
-                <th data-column="v5">V5 ↕</th>
-                <th data-column="cierre">Cierre Total ↕</th>
-                <th data-column="compliancePct">Cumplimiento Promedio % ↕</th>
+                <th onclick="handleSort('supervisors-table', 'leader')">Supervisor ↕</th>
+                <th onclick="handleSort('supervisors-table', 'agentsCount')">Agentes a Cargo ↕</th>
+                <th onclick="handleSort('supervisors-table', 'metaTotal')">Meta Total ↕</th>
+                <th onclick="handleSort('supervisors-table', 'v1')">V1 ↕</th>
+                <th onclick="handleSort('supervisors-table', 'v2')">V2 ↕</th>
+                <th onclick="handleSort('supervisors-table', 'v3')">V3 ↕</th>
+                <th onclick="handleSort('supervisors-table', 'v4')">V4 ↕</th>
+                <th onclick="handleSort('supervisors-table', 'v5')">V5 ↕</th>
+                <th onclick="handleSort('supervisors-table', 'cierre')">Cierre Total ↕</th>
+                <th onclick="handleSort('supervisors-table', 'compliancePct')">Cumplimiento Promedio % ↕</th>
               </tr>
             </thead>
             <tbody></tbody>
@@ -117,16 +117,16 @@
           <table id="coordinators-table">
             <thead>
               <tr>
-                <th data-column="leader">Coordinador ↕</th>
-                <th data-column="agentsCount">Agentes a Cargo ↕</th>
-                <th data-column="metaTotal">Meta Total ↕</th>
-                <th data-column="v1">V1 ↕</th>
-                <th data-column="v2">V2 ↕</th>
-                <th data-column="v3">V3 ↕</th>
-                <th data-column="v4">V4 ↕</th>
-                <th data-column="v5">V5 ↕</th>
-                <th data-column="cierre">Cierre Total ↕</th>
-                <th data-column="compliancePct">Cumplimiento Promedio % ↕</th>
+                <th onclick="handleSort('coordinators-table', 'leader')">Coordinador ↕</th>
+                <th onclick="handleSort('coordinators-table', 'agentsCount')">Agentes a Cargo ↕</th>
+                <th onclick="handleSort('coordinators-table', 'metaTotal')">Meta Total ↕</th>
+                <th onclick="handleSort('coordinators-table', 'v1')">V1 ↕</th>
+                <th onclick="handleSort('coordinators-table', 'v2')">V2 ↕</th>
+                <th onclick="handleSort('coordinators-table', 'v3')">V3 ↕</th>
+                <th onclick="handleSort('coordinators-table', 'v4')">V4 ↕</th>
+                <th onclick="handleSort('coordinators-table', 'v5')">V5 ↕</th>
+                <th onclick="handleSort('coordinators-table', 'cierre')">Cierre Total ↕</th>
+                <th onclick="handleSort('coordinators-table', 'compliancePct')">Cumplimiento Promedio % ↕</th>
               </tr>
             </thead>
             <tbody></tbody>
