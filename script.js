@@ -94,8 +94,7 @@ function loadDashboardData() {
     renderTable(filteredData);
   }
 
-  // Renderiza también la tabla de líderes
-  renderLeadersTable(filteredData);
+  renderLeadersTables(filteredData);
 }
 
 function buildAgentMonthsMap() {
@@ -165,7 +164,7 @@ function filterData() {
     renderTable(filteredData);
   }
 
-  renderLeadersTable(filteredData);
+  renderLeadersTables(filteredData);
 }
 
 function resetAllFilters() {
@@ -189,9 +188,11 @@ function switchTab(tabName) {
 
   if (tabName === 'agents') {
     document.getElementById('tab-agents').style.display = 'block';
-    event.target.classList.add('active');
   } else if (tabName === 'leaders') {
     document.getElementById('tab-leaders').style.display = 'block';
+  }
+
+  if (event && event.target) {
     event.target.classList.add('active');
   }
 }
@@ -303,7 +304,7 @@ function renderTable(data) {
 }
 
 // ==========================================
-// 7. RENDERIZADO TABLA LÍDERES (ACUMULATIVO)
+// 7. RENDERIZADO TABLAS LÍDERES (ACUMULATIVOS)
 // ==========================================
 function parseNum(val) {
   if (!val) return 0;
@@ -311,8 +312,13 @@ function parseNum(val) {
   return isNaN(num) ? 0 : num;
 }
 
-function renderLeadersTable(data) {
-  const tbody = document.querySelector('#leaders-table tbody');
+function renderLeadersTables(data) {
+  renderGroupedTable(data, 'SUPERVISOR', '#supervisors-table tbody');
+  renderGroupedTable(data, 'COORDINADOR', '#coordinators-table tbody');
+}
+
+function renderGroupedTable(data, groupKey, selector) {
+  const tbody = document.querySelector(selector);
   tbody.innerHTML = '';
 
   if (!data || data.length === 0) {
@@ -320,45 +326,39 @@ function renderLeadersTable(data) {
     return;
   }
 
-  // Agrupar por Supervisor
-  const leadersMap = {};
+  const groupMap = {};
 
   data.forEach(row => {
-    const supervisor = row['SUPERVISOR'] ? row['SUPERVISOR'].trim() : 'Sin Supervisor';
+    const leader = row[groupKey] ? row[groupKey].trim() : `Sin ${groupKey.toLowerCase()}`;
     const metaKey = Object.keys(row).find(k => k.startsWith('META')) || 'META';
 
-    if (!leadersMap[supervisor]) {
-      leadersMap[supervisor] = {
+    if (!groupMap[leader]) {
+      groupMap[leader] = {
         agentsCount: 0,
         metaTotal: 0,
-        v1: 0,
-        v2: 0,
-        v3: 0,
-        v4: 0,
-        v5: 0,
+        v1: 0, v2: 0, v3: 0, v4: 0, v5: 0,
         cierre: 0
       };
     }
 
-    leadersMap[supervisor].agentsCount += 1;
-    leadersMap[supervisor].metaTotal += parseNum(row[metaKey]);
-    leadersMap[supervisor].v1 += parseNum(row['V1']);
-    leadersMap[supervisor].v2 += parseNum(row['V2']);
-    leadersMap[supervisor].v3 += parseNum(row['V3']);
-    leadersMap[supervisor].v4 += parseNum(row['V4']);
-    leadersMap[supervisor].v5 += parseNum(row['V5']);
-    leadersMap[supervisor].cierre += parseNum(row['CIERRE']);
+    groupMap[leader].agentsCount += 1;
+    groupMap[leader].metaTotal += parseNum(row[metaKey]);
+    groupMap[leader].v1 += parseNum(row['V1']);
+    groupMap[leader].v2 += parseNum(row['V2']);
+    groupMap[leader].v3 += parseNum(row['V3']);
+    groupMap[leader].v4 += parseNum(row['V4']);
+    groupMap[leader].v5 += parseNum(row['V5']);
+    groupMap[leader].cierre += parseNum(row['CIERRE']);
   });
 
-  // Generar filas
-  Object.keys(leadersMap).sort().forEach(supervisor => {
-    const l = leadersMap[supervisor];
+  Object.keys(groupMap).sort().forEach(leader => {
+    const l = groupMap[leader];
     const compliancePct = l.metaTotal > 0 ? ((l.cierre / l.metaTotal) * 100) : 0;
     const complianceHTML = getComplianceBadge(compliancePct.toString());
 
     const tr = document.createElement('tr');
     tr.innerHTML = `
-      <td><strong>${supervisor}</strong></td>
+      <td><strong>${leader}</strong></td>
       <td>${l.agentsCount}</td>
       <td>${l.metaTotal}</td>
       <td>${l.v1}</td>

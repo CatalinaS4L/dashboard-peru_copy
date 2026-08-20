@@ -21,37 +21,34 @@
   </header>
 
   <main class="container">
-    <!-- Barra de Filtros -->
+    <!-- 1. PESTAÑAS NAVEGACIÓN (Arriba de los filtros) -->
+    <div class="tabs-container">
+      <button class="tab-button active" onclick="switchTab('agents')">Rendimiento por Agente</button>
+      <button class="tab-button" onclick="switchTab('leaders')">Acumulativo por Líder</button>
+    </div>
+
+    <!-- 2. BARRA DE FILTROS -->
     <section class="filters-card">
       <h2>Filtros</h2>
       <div class="filters-grid">
-        <!-- Filtro de Mes -->
         <div>
           <label for="filter-mes">Seleccionar Mes:</label>
           <select id="filter-mes">
             <option value="todos">Todos los meses</option>
           </select>
         </div>
-
-        <!-- Filtro Trainer -->
         <div>
           <label for="filter-trainer">Trainer:</label>
           <select id="filter-trainer"><option value="">Todos</option></select>
         </div>
-
-        <!-- Filtro Supervisor -->
         <div>
           <label for="filter-supervisor">Supervisor:</label>
           <select id="filter-supervisor"><option value="">Todos</option></select>
         </div>
-
-        <!-- Filtro Coordinador -->
         <div>
           <label for="filter-coordinador">Coordinador:</label>
           <select id="filter-coordinador"><option value="">Todos</option></select>
         </div>
-
-        <!-- Botón Limpiar Filtros -->
         <div class="filter-actions">
           <label>&nbsp;</label>
           <button id="btn-reset" type="button">Limpiar Filtros</button>
@@ -59,13 +56,7 @@
       </div>
     </section>
 
-<!-- Navegación por Pestañas (Tabs) -->
-    <div class="tabs-container">
-      <button class="tab-button active" onclick="switchTab('agents')">Rendimiento por Agente</button>
-      <button class="tab-button" onclick="switchTab('leaders')">Acumulativo por Líder</button>
-    </div>
-
-    <!-- TAB 1: Tabla de Agentes -->
+    <!-- 3. TAB 1: Tabla de Agentes -->
     <section id="tab-agents" class="table-card tab-content active">
       <h2>Listado de Agentes</h2>
       <div class="table-wrapper">
@@ -93,27 +84,54 @@
       </div>
     </section>
 
-    <!-- TAB 2: Tabla de Acumulativo por Líder -->
-    <section id="tab-leaders" class="table-card tab-content" style="display: none;">
-      <h2>Acumulativo por Líder (Supervisor)</h2>
-      <div class="table-wrapper">
-        <table id="leaders-table">
-          <thead>
-            <tr>
-              <th>Supervisor</th>
-              <th>Agentes a Cargo</th>
-              <th>Meta Total</th>
-              <th>V1</th>
-              <th>V2</th>
-              <th>V3</th>
-              <th>V4</th>
-              <th>V5</th>
-              <th>Cierre Total</th>
-              <th>Cumplimiento Promedio %</th>
-            </tr>
-          </thead>
-          <tbody></tbody>
-        </table>
+    <!-- 4. TAB 2: Acumulativos por Líder (Supervisor y Coordinador) -->
+    <section id="tab-leaders" class="tab-content" style="display: none;">
+      <!-- Tabla por Supervisor -->
+      <div class="table-card" style="margin-bottom: 25px;">
+        <h2>Acumulativo por Supervisor</h2>
+        <div class="table-wrapper">
+          <table id="supervisors-table">
+            <thead>
+              <tr>
+                <th>Supervisor</th>
+                <th>Agentes a Cargo</th>
+                <th>Meta Total</th>
+                <th>V1</th>
+                <th>V2</th>
+                <th>V3</th>
+                <th>V4</th>
+                <th>V5</th>
+                <th>Cierre Total</th>
+                <th>Cumplimiento Promedio %</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Tabla por Coordinador -->
+      <div class="table-card">
+        <h2>Acumulativo por Coordinador</h2>
+        <div class="table-wrapper">
+          <table id="coordinators-table">
+            <thead>
+              <tr>
+                <th>Coordinador</th>
+                <th>Agentes a Cargo</th>
+                <th>Meta Total</th>
+                <th>V1</th>
+                <th>V2</th>
+                <th>V3</th>
+                <th>V4</th>
+                <th>V5</th>
+                <th>Cierre Total</th>
+                <th>Cumplimiento Promedio %</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
       </div>
     </section>
   </main>
