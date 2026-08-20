@@ -182,7 +182,7 @@ function resetAllFilters() {
 // ==========================================
 // 4. CAMBIO DE PESTAÑAS (TABS)
 // ==========================================
-function switchTab(tabName) {
+function switchTab(tabName, evt) {
   document.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
   document.querySelectorAll('.tab-content').forEach(content => content.style.display = 'none');
 
@@ -192,8 +192,11 @@ function switchTab(tabName) {
     document.getElementById('tab-leaders').style.display = 'block';
   }
 
-  if (event && event.target) {
-    event.target.classList.add('active');
+  // Activar el botón presionado de forma segura
+  if (evt && evt.currentTarget) {
+    evt.currentTarget.classList.add('active');
+  } else if (window.event && window.event.target) {
+    window.event.target.classList.add('active');
   }
 }
 
