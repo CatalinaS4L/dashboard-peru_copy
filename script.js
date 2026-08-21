@@ -91,6 +91,7 @@ function loadDashboardData() {
   resetSelect('filter-trainer');
   resetSelect('filter-supervisor');
   resetSelect('filter-coordinador');
+  resetSelect('filter-status');
 
   populateFilters(rawData);
   renderAllTables();
@@ -124,7 +125,9 @@ function buildAgentMonthsMap() {
 
 function resetSelect(elementId) {
   const select = document.getElementById(elementId);
-  select.innerHTML = '<option value="">Todos</option>';
+  if (select) {
+    select.innerHTML = '<option value="">Todos</option>';
+  }
 }
 
 // ==========================================
@@ -134,14 +137,18 @@ function populateFilters(data) {
   const trainers = [...new Set(data.map(item => item['TRAINER']).filter(Boolean))];
   const supervisors = [...new Set(data.map(item => item['SUPERVISOR']).filter(Boolean))];
   const coordinadores = [...new Set(data.map(item => item['COORDINADOR']).filter(Boolean))];
+  const statuses = [...new Set(data.map(item => item['STATUS AGENTE']).filter(Boolean))];
 
   fillSelect('filter-trainer', trainers);
   fillSelect('filter-supervisor', supervisors);
   fillSelect('filter-coordinador', coordinadores);
+  fillSelect('filter-status', statuses);
 }
 
 function fillSelect(elementId, options) {
   const select = document.getElementById(elementId);
+  if (!select) return;
+
   options.sort().forEach(opt => {
     const option = document.createElement('option');
     option.value = opt;
@@ -159,12 +166,15 @@ function filterData() {
   const trainerVal = document.getElementById('filter-trainer').value;
   const supervisorVal = document.getElementById('filter-supervisor').value;
   const coordinadorVal = document.getElementById('filter-coordinador').value;
+  const statusVal = document.getElementById('filter-status').value;
 
   filteredData = rawData.filter(item => {
     const matchTrainer = !trainerVal || item['TRAINER'] === trainerVal;
     const matchSupervisor = !supervisorVal || item['SUPERVISOR'] === supervisorVal;
     const matchCoordinador = !coordinadorVal || item['COORDINADOR'] === coordinadorVal;
-    return matchTrainer && matchSupervisor && matchCoordinador;
+    const matchStatus = !statusVal || item['STATUS AGENTE'] === statusVal;
+    
+    return matchTrainer && matchSupervisor && matchCoordinador && matchStatus;
   });
 
   renderAllTables();
@@ -175,6 +185,7 @@ function resetAllFilters() {
   document.getElementById('filter-trainer').value = '';
   document.getElementById('filter-supervisor').value = '';
   document.getElementById('filter-coordinador').value = '';
+  document.getElementById('filter-status').value = '';
 
   Object.keys(sortState).forEach(tableId => {
     sortState[tableId] = { column: null, isAsc: true };
