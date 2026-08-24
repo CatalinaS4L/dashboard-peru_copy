@@ -13,8 +13,7 @@ const MONTH_URLS = {
   abril: `${proxy}${encodeURIComponent(`https://docs.google.com/spreadsheets/d/e/2PACX-1vRlckyPnPqEGlq9J9wk_1HwxkfHQqt6X4wHxNtPpRg-RRATO3asLAigUxUyin9D1OS0joXIpJkG8-tL/pub?gid=1499336465&single=true&output=csv&_cb=${timestamp}`)}`,
   mayo: `${proxy}${encodeURIComponent(`https://docs.google.com/spreadsheets/d/e/2PACX-1vRlckyPnPqEGlq9J9wk_1HwxkfHQqt6X4wHxNtPpRg-RRATO3asLAigUxUyin9D1OS0joXIpJkG8-tL/pub?gid=289433826&single=true&output=csv&_cb=${timestamp}`)}`,
   junio: `${proxy}${encodeURIComponent(`https://docs.google.com/spreadsheets/d/e/2PACX-1vRlckyPnPqEGlq9J9wk_1HwxkfHQqt6X4wHxNtPpRg-RRATO3asLAigUxUyin9D1OS0joXIpJkG8-tL/pub?gid=632786864&single=true&output=csv&_cb=${timestamp}`)}`,
-  julio: `${proxy}${encodeURIComponent(`https://docs.google.com/spreadsheets/d/e/2PACX-1vRlckyPnPqEGlq9J9wk_1HwxkfHQqt6X4wHxNtPpRg-RRATO3asLAigUxUyin9D1OS0joXIpJkG8-tL/pub?gid=264290748&single=true&output=csv&_cb=${timestamp}`)}`,
-  agosto: `${proxy}${encodeURIComponent(`https://docs.google.com/spreadsheets/d/e/2PACX-1vRlckyPnPqEGlq9J9wk_1HwxkfHQqt6X4wHxNtPpRg-RRATO3asLAigUxUyin9D1OS0joXIpJkG8-tL/pub?gid=1822972942&single=true&output=csv&_cb=${timestamp}`)}`
+  julio: `${proxy}${encodeURIComponent(`https://docs.google.com/spreadsheets/d/e/2PACX-1vRlckyPnPqEGlq9J9wk_1HwxkfHQqt6X4wHxNtPpRg-RRATO3asLAigUxUyin9D1OS0joXIpJkG8-tL/pub?gid=264290748&single=true&output=csv&_cb=${timestamp}`)}`
 };
 
 let allMonthsData = {};
