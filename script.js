@@ -2,7 +2,7 @@
 //  abril: `${proxy}${encodeURIComponent(`ENLACE_AQUI&_cb=${timestamp}`)}`
 
 // ==========================================
-// 1. CONFIGURACIÓN DE ENLACES POR MES (Anti-Caché + Anti-CORS)
+// 1. CONFIGURACIÓN DE ENLACES POR MES
 // ==========================================
 const timestamp = new Date().getTime();
 const proxy = "https://corsproxy.io/?";
@@ -13,7 +13,8 @@ const MONTH_URLS = {
   abril: `${proxy}${encodeURIComponent(`https://docs.google.com/spreadsheets/d/e/2PACX-1vRlckyPnPqEGlq9J9wk_1HwxkfHQqt6X4wHxNtPpRg-RRATO3asLAigUxUyin9D1OS0joXIpJkG8-tL/pub?gid=1499336465&single=true&output=csv&_cb=${timestamp}`)}`,
   mayo: `${proxy}${encodeURIComponent(`https://docs.google.com/spreadsheets/d/e/2PACX-1vRlckyPnPqEGlq9J9wk_1HwxkfHQqt6X4wHxNtPpRg-RRATO3asLAigUxUyin9D1OS0joXIpJkG8-tL/pub?gid=289433826&single=true&output=csv&_cb=${timestamp}`)}`,
   junio: `${proxy}${encodeURIComponent(`https://docs.google.com/spreadsheets/d/e/2PACX-1vRlckyPnPqEGlq9J9wk_1HwxkfHQqt6X4wHxNtPpRg-RRATO3asLAigUxUyin9D1OS0joXIpJkG8-tL/pub?gid=632786864&single=true&output=csv&_cb=${timestamp}`)}`,
-  julio: `${proxy}${encodeURIComponent(`https://docs.google.com/spreadsheets/d/e/2PACX-1vRlckyPnPqEGlq9J9wk_1HwxkfHQqt6X4wHxNtPpRg-RRATO3asLAigUxUyin9D1OS0joXIpJkG8-tL/pub?gid=264290748&single=true&output=csv&_cb=${timestamp}`)}`
+  julio: `${proxy}${encodeURIComponent(`https://docs.google.com/spreadsheets/d/e/2PACX-1vRlckyPnPqEGlq9J9wk_1HwxkfHQqt6X4wHxNtPpRg-RRATO3asLAigUxUyin9D1OS0joXIpJkG8-tL/pub?gid=264290748&single=true&output=csv&_cb=${timestamp}`)}`,
+  agosto: `${proxy}${encodeURIComponent(`https://docs.google.com/spreadsheets/d/e/2PACX-1vRlckyPnPqEGlq9J9wk_1HwxkfHQqt6X4wHxNtPpRg-RRATO3asLAigUxUyin9D1OS0joXIpJkG8-tL/pub?gid=1822972942&single=true&output=csv&_cb=${timestamp}`)}`
 };
 
 let allMonthsData = {};
@@ -28,11 +29,10 @@ let sortState = {
 };
 
 // ==========================================
-// 2. CONSTRUCCIÓN Y CARGA DE DATOS (PROTEGIDA)
+// 2. CONSTRUCCIÓN Y CARGA DE DATOS
 // ==========================================
 function populateMonthSelector() {
   const selectMes = document.getElementById('filter-mes');
-  if (!selectMes) return;
   
   Object.keys(MONTH_URLS).forEach(monthKey => {
     if (!selectMes.querySelector(`option[value="${monthKey}"]`)) {
@@ -54,11 +54,8 @@ async function preloadAllMonths() {
         download: true,
         header: true,
         skipEmptyLines: true,
-        transformHeader: h => (h ? h.trim() : ''),
-        complete: results => {
-          const validData = (results.data || []).filter(row => row && row['PROMOTOR'] && row['PROMOTOR'].trim() !== '');
-          resolve({ month, data: validData });
-        },
+        transformHeader: h => h.trim(),
+        complete: results => resolve({ month, data: results.data }),
         error: () => resolve({ month, data: [] })
       });
     });
@@ -86,7 +83,7 @@ function loadDashboardData() {
   }
 
   rawData = rawData.map(row => {
-    const agentName = (row['PROMOTOR'] || '').trim().toUpperCase();
+    const agentName = row['PROMOTOR'] ? row['PROMOTOR'].trim().toUpperCase() : '';
     const activeMonths = agentMonthsMap[agentName] || [];
     const formattedMonths = activeMonths
       .map(m => m.charAt(0).toUpperCase() + m.slice(1))
@@ -123,13 +120,11 @@ function buildAgentMonthsMap() {
   const map = {};
   Object.keys(allMonthsData).forEach(month => {
     allMonthsData[month].forEach(row => {
-      if (row && row['PROMOTOR']) {
-        const agent = row['PROMOTOR'].trim().toUpperCase();
-        if (agent) {
-          if (!map[agent]) map[agent] = [];
-          if (!map[agent].includes(month)) {
-            map[agent].push(month);
-          }
+      const agent = row['PROMOTOR'] ? row['PROMOTOR'].trim().toUpperCase() : null;
+      if (agent) {
+        if (!map[agent]) map[agent] = [];
+        if (!map[agent].includes(month)) {
+          map[agent].push(month);
         }
       }
     });
@@ -209,25 +204,22 @@ function resetAllFilters() {
 }
 
 // ==========================================
-// 4. CAMBIO DE PESTAÑAS (TABS CORREGIDO)
+// 4. CAMBIO DE PESTAÑAS (TABS)
 // ==========================================
 function switchTab(tabName, evt) {
-  const agentsTab = document.getElementById('tab-agents');
-  const leadersTab = document.getElementById('tab-leaders');
-  const buttons = document.querySelectorAll('.tab-button');
-
-  buttons.forEach(btn => btn.classList.remove('active'));
+  document.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
+  document.querySelectorAll('.tab-content').forEach(content => content.style.display = 'none');
 
   if (tabName === 'agents') {
-    agentsTab.style.display = 'block';
-    leadersTab.style.display = 'none';
+    document.getElementById('tab-agents').style.display = 'block';
   } else if (tabName === 'leaders') {
-    agentsTab.style.display = 'none';
-    leadersTab.style.display = 'block';
+    document.getElementById('tab-leaders').style.display = 'block';
   }
 
   if (evt && evt.currentTarget) {
     evt.currentTarget.classList.add('active');
+  } else if (window.event && window.event.target) {
+    window.event.target.classList.add('active');
   }
 }
 
@@ -308,7 +300,6 @@ function getComplianceBadge(valueStr) {
 // ==========================================
 function renderTable(data) {
   const tbody = document.querySelector('#agents-table tbody');
-  if (!tbody) return;
   tbody.innerHTML = '';
 
   if (!data || data.length === 0) {
@@ -357,7 +348,6 @@ function renderLeadersTables(data) {
 
 function renderGroupedTable(data, groupKey, selector, tableId) {
   const tbody = document.querySelector(selector);
-  if (!tbody) return;
   tbody.innerHTML = '';
 
   if (!data || data.length === 0) {
