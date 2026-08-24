@@ -1,15 +1,11 @@
 // ==========================================
-// 1. CONFIGURACIÓN DE ENLACES POR MES (Con Proxy Anti-CORS)
+// 1. CONFIGURACIÓN DE ENLACES POR MES (Directo desde Google Sheets)
 // ==========================================
 const timestamp = new Date().getTime();
-const proxy = "https://corsproxy.io/?";
-
-const febUrl = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRlckyPnPqEGlq9J9wk_1HwxkfHQqt6X4wHxNtPpRg-RRATO3asLAigUxUyin9D1OS0joXIpJkG8-tL/pub?gid=0&single=true&output=csv&_cb=" + timestamp;
-const marUrl = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRlckyPnPqEGlq9J9wk_1HwxkfHQqt6X4wHxNtPpRg-RRATO3asLAigUxUyin9D1OS0joXIpJkG8-tL/pub?gid=397555912&single=true&output=csv&_cb=" + timestamp;
 
 const MONTH_URLS = {
-  febrero: proxy + encodeURIComponent(febUrl),
-  marzo: proxy + encodeURIComponent(marUrl)
+  febrero: `https://docs.google.com/spreadsheets/d/e/2PACX-1vRlckyPnPqEGlq9J9wk_1HwxkfHQqt6X4wHxNtPpRg-RRATO3asLAigUxUyin9D1OS0joXIpJkG8-tL/pub?gid=0&single=true&output=csv&_cb=${timestamp}`,
+  marzo: `https://docs.google.com/spreadsheets/d/e/2PACX-1vRlckyPnPqEGlq9J9wk_1HwxkfHQqt6X4wHxNtPpRg-RRATO3asLAigUxUyin9D1OS0joXIpJkG8-tL/pub?gid=397555912&single=true&output=csv&_cb=${timestamp}`
 };
 
 let allMonthsData = {};
@@ -23,7 +19,7 @@ let sortState = {
   'coordinators-table': { column: null, isAsc: true }
 };
 
-// Función auxiliar para obtener el valor de una columna sin importar espacios o mayúsculas
+// Obtiene el valor de una columna ignorando mayúsculas o espacios extra
 function getRowValue(row, keyName) {
   if (!row) return '';
   const targetKey = keyName.trim().toUpperCase();
@@ -32,7 +28,7 @@ function getRowValue(row, keyName) {
 }
 
 // ==========================================
-// 2. CONSTRUCCIÓN Y CARGA DE DATOS
+// 2. CARGA Y PARSEO DE DATOS
 // ==========================================
 function populateMonthSelector() {
   const selectMes = document.getElementById('filter-mes');
@@ -43,7 +39,7 @@ function populateMonthSelector() {
       const option = document.createElement('option');
       option.value = monthKey;
       const formattedName = monthKey.charAt(0).toUpperCase() + monthKey.slice(1);
-      option.textContent = formattedName + " 2026";
+      option.textContent = `${formattedName} 2026`;
       selectMes.appendChild(option);
     }
   });
@@ -60,18 +56,19 @@ async function preloadAllMonths() {
         skipEmptyLines: true,
         transformHeader: h => (h ? h.trim() : ''),
         complete: results => {
-          console.log(`Datos recibidos para ${month}:`, results.data);
+          console.log(`[OK] Datos descargados para ${month}:`, results.data);
           
+          // Filtra filas que tengan contenido en la columna del agente/promotor
           const validData = (results.data || []).filter(row => {
             const agentVal = getRowValue(row, 'PROMOTOR');
             return agentVal && agentVal.toString().trim() !== '';
           });
 
-          console.log(`Filas válidas para ${month}: ${validData.length}`);
+          console.log(`[OK] Filas válidas procesadas para ${month}: ${validData.length}`);
           resolve({ month, data: validData });
         },
         error: (err) => {
-          console.error(`Error al descargar ${month}:`, err);
+          console.error(`[ERROR] No se pudo descargar el mes ${month}:`, err);
           resolve({ month, data: [] });
         }
       });
@@ -157,7 +154,7 @@ function resetSelect(elementId) {
 }
 
 // ==========================================
-// 3. LÓGICA DE FILTROS Y REINICIO
+// 3. FILTROS Y EVENTOS
 // ==========================================
 function populateFilters(data) {
   const trainers = [...new Set(data.map(item => getRowValue(item, 'TRAINER')).filter(Boolean))];
@@ -243,7 +240,7 @@ function switchTab(tabName, evt) {
 }
 
 // ==========================================
-// 5. SISTEMA GENERAL DE ORDENAMIENTO
+// 5. ORDENAMIENTO
 // ==========================================
 function handleSort(tableId, columnKey) {
   const current = sortState[tableId];
