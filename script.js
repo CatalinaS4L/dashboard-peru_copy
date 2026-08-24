@@ -18,11 +18,18 @@ let sortState = {
   'coordinators-table': { column: null, isAsc: true }
 };
 
-// Función de lectura tolerante a espacios y caracteres de control (\r)
+// Función de lectura tolerante a prefijos (detecta 'META FEBRERO', 'META MARZO', etc.)
 function getRowValue(row, keyName) {
   if (!row) return '';
   const targetKey = keyName.trim().toUpperCase();
-  const actualKey = Object.keys(row).find(k => k && k.replace(/[\r\n]/g, '').trim().toUpperCase() === targetKey);
+  
+  const actualKey = Object.keys(row).find(k => {
+    if (!k) return false;
+    const cleanKey = k.replace(/[\r\n]/g, '').trim().toUpperCase();
+    // Coincidencia exacta O si la columna empieza con la palabra clave (ej: META FEBRERO empieza con META)
+    return cleanKey === targetKey || cleanKey.startsWith(targetKey);
+  });
+  
   return actualKey ? row[actualKey].toString().trim() : '';
 }
 
