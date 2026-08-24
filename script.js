@@ -14,7 +14,7 @@ const MONTH_URLS = {
   mayo: `${proxy}${encodeURIComponent(`https://docs.google.com/spreadsheets/d/e/2PACX-1vRlckyPnPqEGlq9J9wk_1HwxkfHQqt6X4wHxNtPpRg-RRATO3asLAigUxUyin9D1OS0joXIpJkG8-tL/pub?gid=289433826&single=true&output=csv&_cb=${timestamp}`)}`,
   junio: `${proxy}${encodeURIComponent(`https://docs.google.com/spreadsheets/d/e/2PACX-1vRlckyPnPqEGlq9J9wk_1HwxkfHQqt6X4wHxNtPpRg-RRATO3asLAigUxUyin9D1OS0joXIpJkG8-tL/pub?gid=632786864&single=true&output=csv&_cb=${timestamp}`)}`,
   julio: `${proxy}${encodeURIComponent(`https://docs.google.com/spreadsheets/d/e/2PACX-1vRlckyPnPqEGlq9J9wk_1HwxkfHQqt6X4wHxNtPpRg-RRATO3asLAigUxUyin9D1OS0joXIpJkG8-tL/pub?gid=264290748&single=true&output=csv&_cb=${timestamp}`)}`,
-  agosto: `${proxy}${encodeURIComponent(`https://docs.google.com/spreadsheets/d/e/2PACX-1vRlckyPnPqEGlq9J9wk_1HwxkfHQqt6X4wHxNtPpRg-RRATO3asLAigUxUyin9D1OS0joXIpJkG8-tL/pub?gid=1822972942&single=true&output=csv&_cb=${timestamp}`)}`,
+  agosto: `${proxy}${encodeURIComponent(`https://docs.google.com/spreadsheets/d/e/2PACX-1vRlckyPnPqEGlq9J9wk_1HwxkfHQqt6X4wHxNtPpRg-RRATO3asLAigUxUyin9D1OS0joXIpJkG8-tL/pub?gid=1822972942&single=true&output=csv&_cb=${timestamp}`)}`
 };
 
 let allMonthsData = {};
@@ -57,7 +57,6 @@ async function preloadAllMonths() {
         skipEmptyLines: true,
         transformHeader: h => (h ? h.trim() : ''),
         complete: results => {
-          // Filtra filas que tengan la columna PROMOTOR válida para omitir filas vacías
           const validData = (results.data || []).filter(row => row && row['PROMOTOR'] && row['PROMOTOR'].trim() !== '');
           resolve({ month, data: validData });
         },
@@ -211,22 +210,25 @@ function resetAllFilters() {
 }
 
 // ==========================================
-// 4. CAMBIO DE PESTAÑAS (TABS)
+// 4. CAMBIO DE PESTAÑAS (TABS CORREGIDO)
 // ==========================================
 function switchTab(tabName, evt) {
-  document.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
-  document.querySelectorAll('.tab-content').forEach(content => content.style.display = 'none');
+  const agentsTab = document.getElementById('tab-agents');
+  const leadersTab = document.getElementById('tab-leaders');
+  const buttons = document.querySelectorAll('.tab-button');
+
+  buttons.forEach(btn => btn.classList.remove('active'));
 
   if (tabName === 'agents') {
-    document.getElementById('tab-agents').style.display = 'block';
+    agentsTab.style.display = 'block';
+    leadersTab.style.display = 'none';
   } else if (tabName === 'leaders') {
-    document.getElementById('tab-leaders').style.display = 'block';
+    agentsTab.style.display = 'none';
+    leadersTab.style.display = 'block';
   }
 
   if (evt && evt.currentTarget) {
     evt.currentTarget.classList.add('active');
-  } else if (window.event && window.event.target) {
-    window.event.target.classList.add('active');
   }
 }
 
