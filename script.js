@@ -13,12 +13,20 @@ let allMonthsData = {};
 let rawData = [];
 let filteredData = [];
 
-// Estado de ordenamiento para cada tabla
+// Estado de ordenamiento
 let sortState = {
   'agents-table': { column: null, isAsc: true },
   'supervisors-table': { column: null, isAsc: true },
   'coordinators-table': { column: null, isAsc: true }
 };
+
+// Función auxiliar para obtener el valor de una columna sin importar espacios o mayúsculas
+function getRowValue(row, keyName) {
+  if (!row) return '';
+  const targetKey = keyName.trim().toUpperCase();
+  const actualKey = Object.keys(row).find(k => k.trim().toUpperCase() === targetKey || k.trim().toUpperCase().startsWith(targetKey));
+  return actualKey ? row[actualKey] : '';
+}
 
 // ==========================================
 // 2. CONSTRUCCIÓN Y CARGA DE DATOS
@@ -49,10 +57,21 @@ async function preloadAllMonths() {
         skipEmptyLines: true,
         transformHeader: h => (h ? h.trim() : ''),
         complete: results => {
-          const validData = (results.data || []).filter(row => row && row['PROMOTOR'] && row['PROMOTOR'].trim() !== '');
+          console.log(`Datos recibidos para ${month}:`, results.data);
+          
+          // Filtrado flexible: busca cualquier columna que contenga el promotor/agente
+          const validData = (results.data || []).filter(row => {
+            const agentVal = getRowValue(row, 'PROMOTOR');
+            return agentVal && agentVal.toString().trim() !== '';
+          });
+
+          console.log(`Filas válidas procesadas para ${month}: ${validData.length}`);
           resolve({ month, data: validData });
         },
-        error: () => resolve({ month, data: [] })
+        error: (err) => {
+          console.error(`Error al descargar datos de ${month}:`, err);
+          resolve({ month, data: [] });
+        }
       });
     });
   });
@@ -79,7 +98,7 @@ function loadDashboardData() {
   }
 
   rawData = rawData.map(row => {
-    const agentName = row['PROMOTOR'] ? row['PROMOTOR'].trim().toUpperCase() : '';
+    const agentName = getRowValue(row, 'PROMOTOR').toString().trim().toUpperCase();
     const activeMonths = agentMonthsMap[agentName] || [];
     const formattedMonths = activeMonths
       .map(m => m.charAt(0).toUpperCase() + m.slice(1))
@@ -116,7 +135,7 @@ function buildAgentMonthsMap() {
   const map = {};
   Object.keys(allMonthsData).forEach(month => {
     allMonthsData[month].forEach(row => {
-      const agent = row['PROMOTOR'] ? row['PROMOTOR'].trim().toUpperCase() : null;
+      const agent = getRowValue(row, 'PROMOTOR').toString().trim().toUpperCase();
       if (agent) {
         if (!map[agent]) map[agent] = [];
         if (!map[agent].includes(month)) {
@@ -139,10 +158,10 @@ function resetSelect(elementId) {
 // 3. LÓGICA DE FILTROS Y REINICIO
 // ==========================================
 function populateFilters(data) {
-  const trainers = [...new Set(data.map(item => item['TRAINER']).filter(Boolean))];
-  const supervisors = [...new Set(data.map(item => item['SUPERVISOR']).filter(Boolean))];
-  const coordinadores = [...new Set(data.map(item => item['COORDINADOR']).filter(Boolean))];
-  const statuses = [...new Set(data.map(item => item['STATUS AGENTE']).filter(Boolean))];
+  const trainers = [...new Set(data.map(item => getRowValue(item, 'TRAINER')).filter(Boolean))];
+  const supervisors = [...new Set(data.map(item => getRowValue(item, 'SUPERVISOR')).filter(Boolean))];
+  const coordinadores = [...new Set(data.map(item => getRowValue(item, 'COORDINADOR')).filter(Boolean))];
+  const statuses = [...new Set(data.map(item => getRowValue(item, 'STATUS AGENTE')).filter(Boolean))];
 
   fillSelect('filter-trainer', trainers);
   fillSelect('filter-supervisor', supervisors);
@@ -174,10 +193,10 @@ function filterData() {
   const statusVal = document.getElementById('filter-status').value;
 
   filteredData = rawData.filter(item => {
-    const matchTrainer = !trainerVal || item['TRAINER'] === trainerVal;
-    const matchSupervisor = !supervisorVal || item['SUPERVISOR'] === supervisorVal;
-    const matchCoordinador = !coordinadorVal || item['COORDINADOR'] === coordinadorVal;
-    const matchStatus = !statusVal || item['STATUS AGENTE'] === statusVal;
+    const matchTrainer = !trainerVal || getRowValue(item, 'TRAINER') === trainerVal;
+    const matchSupervisor = !supervisorVal || getRowValue(item, 'SUPERVISOR') === supervisorVal;
+    const matchCoordinador = !coordinadorVal || getRowValue(item, 'COORDINADOR') === coordinadorVal;
+    const matchStatus = !statusVal || getRowValue(item, 'STATUS AGENTE') === statusVal;
     
     return matchTrainer && matchSupervisor && matchCoordinador && matchStatus;
   });
@@ -222,7 +241,7 @@ function switchTab(tabName, evt) {
 }
 
 // ==========================================
-// 5. SISTEMA GENERAL DE ORDENAMIENTO DE TABLAS
+// 5. SISTEMA GENERAL DE ORDENAMIENTO
 // ==========================================
 function handleSort(tableId, columnKey) {
   const current = sortState[tableId];
@@ -248,8 +267,8 @@ function applyAgentSort() {
   const { column, isAsc } = sortState['agents-table'];
 
   filteredData.sort((a, b) => {
-    let valA = getColumnValue(a, column);
-    let valB = getColumnValue(b, column);
+    let valA = getRowValue(a, column);
+    let valB = getRowValue(b, column);
 
     let numA = parseFloat(valA.toString().replace('%', '').replace(',', '.'));
     let numB = parseFloat(valB.toString().replace('%', '').replace(',', '.'));
@@ -267,14 +286,6 @@ function applyAgentSort() {
   });
 
   renderTable(filteredData);
-}
-
-function getColumnValue(row, columnKey) {
-  if (columnKey === 'META') {
-    const metaKey = Object.keys(row).find(k => k.startsWith('META')) || 'META';
-    return row[metaKey] || 0;
-  }
-  return row[columnKey] || 0;
 }
 
 function getComplianceBadge(valueStr) {
@@ -307,24 +318,25 @@ function renderTable(data) {
   }
 
   data.forEach(row => {
-    const metaKey = Object.keys(row).find(k => k.startsWith('META')) || 'META';
-    const complianceHTML = getComplianceBadge(row['CUMPLIMIENTO MES']);
+    const metaVal = getRowValue(row, 'META');
+    const complianceVal = getRowValue(row, 'CUMPLIMIENTO MES');
+    const complianceHTML = getComplianceBadge(complianceVal);
     
     const tr = document.createElement('tr');
     tr.innerHTML = `
-      <td><strong>${row['PROMOTOR'] || '-'}</strong></td>
-      <td>${row['TRAINER'] || '-'}</td>
-      <td>${row['SUPERVISOR'] || '-'}</td>
-      <td>${row['COORDINADOR'] || '-'}</td>
-      <td>${row[metaKey] || '0'}</td>
-      <td>${row['V1'] || '0'}</td>
-      <td>${row['V2'] || '0'}</td>
-      <td>${row['V3'] || '0'}</td>
-      <td>${row['V4'] || '0'}</td>
-      <td>${row['V5'] || '0'}</td>
-      <td>${row['CIERRE'] || '0'}</td>
+      <td><strong>${getRowValue(row, 'PROMOTOR') || '-'}</strong></td>
+      <td>${getRowValue(row, 'TRAINER') || '-'}</td>
+      <td>${getRowValue(row, 'SUPERVISOR') || '-'}</td>
+      <td>${getRowValue(row, 'COORDINADOR') || '-'}</td>
+      <td>${metaVal || '0'}</td>
+      <td>${getRowValue(row, 'V1') || '0'}</td>
+      <td>${getRowValue(row, 'V2') || '0'}</td>
+      <td>${getRowValue(row, 'V3') || '0'}</td>
+      <td>${getRowValue(row, 'V4') || '0'}</td>
+      <td>${getRowValue(row, 'V5') || '0'}</td>
+      <td>${getRowValue(row, 'CIERRE') || '0'}</td>
       <td>${complianceHTML}</td>
-      <td>${row['STATUS AGENTE'] || '-'}</td>
+      <td>${getRowValue(row, 'STATUS AGENTE') || '-'}</td>
       <td>${row['MESES_ACTIVO'] || '-'}</td>
     `;
     tbody.appendChild(tr);
@@ -358,9 +370,8 @@ function renderGroupedTable(data, groupKey, selector, tableId) {
   const groupMap = {};
 
   data.forEach(row => {
-    const actualKey = Object.keys(row).find(k => k.trim().toUpperCase() === groupKey.toUpperCase());
-    const leader = (actualKey && row[actualKey]) ? row[actualKey].trim() : `Sin ${groupKey.toLowerCase()}`;
-    const metaKey = Object.keys(row).find(k => k.trim().toUpperCase().startsWith('META')) || 'META';
+    const rawLeader = getRowValue(row, groupKey);
+    const leader = rawLeader ? rawLeader.toString().trim() : `Sin ${groupKey.toLowerCase()}`;
 
     if (!groupMap[leader]) {
       groupMap[leader] = {
@@ -374,13 +385,13 @@ function renderGroupedTable(data, groupKey, selector, tableId) {
     }
 
     groupMap[leader].agentsCount += 1;
-    groupMap[leader].metaTotal += parseNum(row[metaKey]);
-    groupMap[leader].v1 += parseNum(row['V1']);
-    groupMap[leader].v2 += parseNum(row['V2']);
-    groupMap[leader].v3 += parseNum(row['V3']);
-    groupMap[leader].v4 += parseNum(row['V4']);
-    groupMap[leader].v5 += parseNum(row['V5']);
-    groupMap[leader].cierre += parseNum(row['CIERRE']);
+    groupMap[leader].metaTotal += parseNum(getRowValue(row, 'META'));
+    groupMap[leader].v1 += parseNum(getRowValue(row, 'V1'));
+    groupMap[leader].v2 += parseNum(getRowValue(row, 'V2'));
+    groupMap[leader].v3 += parseNum(getRowValue(row, 'V3'));
+    groupMap[leader].v4 += parseNum(getRowValue(row, 'V4'));
+    groupMap[leader].v5 += parseNum(getRowValue(row, 'V5'));
+    groupMap[leader].cierre += parseNum(getRowValue(row, 'CIERRE'));
   });
 
   let leadersList = Object.values(groupMap);
