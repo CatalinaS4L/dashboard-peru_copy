@@ -5,8 +5,8 @@ const timestamp = new Date().getTime();
 const proxy = "https://corsproxy.io/?";
 
 const MONTH_URLS = {
-  febrero: `${proxy}${encodeURIComponent(`https://docs.google.com/spreadsheets/d/e/2PACX-1vRlckyPnPqEGlq9J9wk_1HwxkfHQqt6X4wHxNtPpRg-RRATO3asLAigUxUyin9D1OS0joXIpJkG8-tL/pub?gid=0&single=true&output=csv&_cb=${timestamp}`)}`,
-  marzo: `${proxy}${encodeURIComponent(`https://docs.google.com/spreadsheets/d/e/2PACX-1vRlckyPnPqEGlq9J9wk_1HwxkfHQqt6X4wHxNtPpRg-RRATO3asLAigUxUyin9D1OS0joXIpJkG8-tL/pub?gid=397555912&single=true&output=csv&_cb=${timestamp}`)}`
+  febrero: '${proxy}${encodeURIComponent('https://docs.google.com/spreadsheets/d/e/2PACX-1vRlckyPnPqEGlq9J9wk_1HwxkfHQqt6X4wHxNtPpRg-RRATO3asLAigUxUyin9D1OS0joXIpJkG8-tL/pub?gid=0&single=true&output=csv&_cb=${timestamp}')}',
+  marzo: '${proxy}${encodeURIComponent('https://docs.google.com/spreadsheets/d/e/2PACX-1vRlckyPnPqEGlq9J9wk_1HwxkfHQqt6X4wHxNtPpRg-RRATO3asLAigUxUyin9D1OS0joXIpJkG8-tL/pub?gid=397555912&single=true&output=csv&_cb=${timestamp}')}'
 };
 
 let allMonthsData = {};
