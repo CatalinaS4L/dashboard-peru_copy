@@ -4,9 +4,12 @@
 const timestamp = new Date().getTime();
 const proxy = "https://corsproxy.io/?";
 
+const febUrl = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRlckyPnPqEGlq9J9wk_1HwxkfHQqt6X4wHxNtPpRg-RRATO3asLAigUxUyin9D1OS0joXIpJkG8-tL/pub?gid=0&single=true&output=csv&_cb=" + timestamp;
+const marUrl = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRlckyPnPqEGlq9J9wk_1HwxkfHQqt6X4wHxNtPpRg-RRATO3asLAigUxUyin9D1OS0joXIpJkG8-tL/pub?gid=397555912&single=true&output=csv&_cb=" + timestamp;
+
 const MONTH_URLS = {
-  febrero: `${proxy}${encodeURIComponent(`https://docs.google.com/spreadsheets/d/e/2PACX-1vRlckyPnPqEGlq9J9wk_1HwxkfHQqt6X4wHxNtPpRg-RRATO3asLAigUxUyin9D1OS0joXIpJkG8-tL/pub?gid=0&single=true&output=csv&_cb=${timestamp}`)}`,
-  marzo: `${proxy}${encodeURIComponent(`https://docs.google.com/spreadsheets/d/e/2PACX-1vRlckyPnPqEGlq9J9wk_1HwxkfHQqt6X4wHxNtPpRg-RRATO3asLAigUxUyin9D1OS0joXIpJkG8-tL/pub?gid=397555912&single=true&output=csv&_cb=${timestamp}`)}`
+  febrero: proxy + encodeURIComponent(febUrl),
+  marzo: proxy + encodeURIComponent(marUrl)
 };
 
 let allMonthsData = {};
@@ -40,7 +43,7 @@ function populateMonthSelector() {
       const option = document.createElement('option');
       option.value = monthKey;
       const formattedName = monthKey.charAt(0).toUpperCase() + monthKey.slice(1);
-      option.textContent = `${formattedName} 2026`;
+      option.textContent = formattedName + " 2026";
       selectMes.appendChild(option);
     }
   });
@@ -59,17 +62,16 @@ async function preloadAllMonths() {
         complete: results => {
           console.log(`Datos recibidos para ${month}:`, results.data);
           
-          // Filtrado flexible: busca cualquier columna que contenga el promotor/agente
           const validData = (results.data || []).filter(row => {
             const agentVal = getRowValue(row, 'PROMOTOR');
             return agentVal && agentVal.toString().trim() !== '';
           });
 
-          console.log(`Filas válidas procesadas para ${month}: ${validData.length}`);
+          console.log(`Filas válidas para ${month}: ${validData.length}`);
           resolve({ month, data: validData });
         },
         error: (err) => {
-          console.error(`Error al descargar datos de ${month}:`, err);
+          console.error(`Error al descargar ${month}:`, err);
           resolve({ month, data: [] });
         }
       });
@@ -344,7 +346,7 @@ function renderTable(data) {
 }
 
 // ==========================================
-// 7. RENDERIZADO TABLAS LÍDERES (ACUMULATIVOS)
+// 7. RENDERIZADO TABLAS LÍDERES
 // ==========================================
 function parseNum(val) {
   if (!val) return 0;
