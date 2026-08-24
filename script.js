@@ -2,7 +2,7 @@
 //  abril: `${proxy}${encodeURIComponent(`ENLACE_AQUI&_cb=${timestamp}`)}`
 
 // ==========================================
-// 1. CONFIGURACIÓN DE ENLACES POR MES
+// 1. CONFIGURACIÓN DE ENLACES POR MES (Anti-Caché + Anti-CORS)
 // ==========================================
 const timestamp = new Date().getTime();
 const proxy = "https://corsproxy.io/?";
@@ -33,10 +33,11 @@ let sortState = {
 };
 
 // ==========================================
-// 2. CONSTRUCCIÓN Y CARGA DE DATOS
+// 2. CONSTRUCCIÓN Y CARGA DE DATOS (PROTEGIDA)
 // ==========================================
 function populateMonthSelector() {
   const selectMes = document.getElementById('filter-mes');
+  if (!selectMes) return;
   
   Object.keys(MONTH_URLS).forEach(monthKey => {
     if (!selectMes.querySelector(`option[value="${monthKey}"]`)) {
@@ -58,8 +59,12 @@ async function preloadAllMonths() {
         download: true,
         header: true,
         skipEmptyLines: true,
-        transformHeader: h => h.trim(),
-        complete: results => resolve({ month, data: results.data }),
+        transformHeader: h => (h ? h.trim() : ''),
+        complete: results => {
+          // Filtra filas que tengan la columna PROMOTOR válida para omitir filas vacías
+          const validData = (results.data || []).filter(row => row && row['PROMOTOR'] && row['PROMOTOR'].trim() !== '');
+          resolve({ month, data: validData });
+        },
         error: () => resolve({ month, data: [] })
       });
     });
@@ -87,7 +92,7 @@ function loadDashboardData() {
   }
 
   rawData = rawData.map(row => {
-    const agentName = row['PROMOTOR'] ? row['PROMOTOR'].trim().toUpperCase() : '';
+    const agentName = (row['PROMOTOR'] || '').trim().toUpperCase();
     const activeMonths = agentMonthsMap[agentName] || [];
     const formattedMonths = activeMonths
       .map(m => m.charAt(0).toUpperCase() + m.slice(1))
@@ -124,11 +129,13 @@ function buildAgentMonthsMap() {
   const map = {};
   Object.keys(allMonthsData).forEach(month => {
     allMonthsData[month].forEach(row => {
-      const agent = row['PROMOTOR'] ? row['PROMOTOR'].trim().toUpperCase() : null;
-      if (agent) {
-        if (!map[agent]) map[agent] = [];
-        if (!map[agent].includes(month)) {
-          map[agent].push(month);
+      if (row && row['PROMOTOR']) {
+        const agent = row['PROMOTOR'].trim().toUpperCase();
+        if (agent) {
+          if (!map[agent]) map[agent] = [];
+          if (!map[agent].includes(month)) {
+            map[agent].push(month);
+          }
         }
       }
     });
@@ -304,6 +311,7 @@ function getComplianceBadge(valueStr) {
 // ==========================================
 function renderTable(data) {
   const tbody = document.querySelector('#agents-table tbody');
+  if (!tbody) return;
   tbody.innerHTML = '';
 
   if (!data || data.length === 0) {
@@ -352,6 +360,7 @@ function renderLeadersTables(data) {
 
 function renderGroupedTable(data, groupKey, selector, tableId) {
   const tbody = document.querySelector(selector);
+  if (!tbody) return;
   tbody.innerHTML = '';
 
   if (!data || data.length === 0) {
