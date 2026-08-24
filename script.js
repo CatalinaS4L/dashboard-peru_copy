@@ -1,5 +1,5 @@
 // ==========================================
-// 1. CONFIGURACIÓN DE ENLACES POR MES (Directo desde Google Sheets)
+// 1. ENLACES DIRECTOS A GOOGLE SHEETS
 // ==========================================
 const timestamp = new Date().getTime();
 
@@ -12,23 +12,22 @@ let allMonthsData = {};
 let rawData = [];
 let filteredData = [];
 
-// Estado de ordenamiento
 let sortState = {
   'agents-table': { column: null, isAsc: true },
   'supervisors-table': { column: null, isAsc: true },
   'coordinators-table': { column: null, isAsc: true }
 };
 
-// Obtiene el valor de una columna ignorando mayúsculas o espacios extra
+// Función de lectura tolerante a espacios y caracteres de control (\r)
 function getRowValue(row, keyName) {
   if (!row) return '';
   const targetKey = keyName.trim().toUpperCase();
-  const actualKey = Object.keys(row).find(k => k.trim().toUpperCase() === targetKey || k.trim().toUpperCase().startsWith(targetKey));
-  return actualKey ? row[actualKey] : '';
+  const actualKey = Object.keys(row).find(k => k && k.replace(/[\r\n]/g, '').trim().toUpperCase() === targetKey);
+  return actualKey ? row[actualKey].toString().trim() : '';
 }
 
 // ==========================================
-// 2. CARGA Y PARSEO DE DATOS
+// 2. CARGA DE DATOS
 // ==========================================
 function populateMonthSelector() {
   const selectMes = document.getElementById('filter-mes');
@@ -53,22 +52,21 @@ async function preloadAllMonths() {
       Papa.parse(MONTH_URLS[month], {
         download: true,
         header: true,
-        skipEmptyLines: true,
-        transformHeader: h => (h ? h.trim() : ''),
+        skipEmptyLines: 'greedy',
+        transformHeader: h => (h ? h.replace(/[\r\n]/g, '').trim() : ''),
         complete: results => {
-          console.log(`[OK] Datos descargados para ${month}:`, results.data);
-          
-          // Filtra filas que tengan contenido en la columna del agente/promotor
+          console.log(`[OK] Descargado ${month}:`, results.data);
+
           const validData = (results.data || []).filter(row => {
             const agentVal = getRowValue(row, 'PROMOTOR');
-            return agentVal && agentVal.toString().trim() !== '';
+            return agentVal && agentVal !== '';
           });
 
-          console.log(`[OK] Filas válidas procesadas para ${month}: ${validData.length}`);
+          console.log(`[FILTRADO] Filas válidas para ${month}: ${validData.length}`);
           resolve({ month, data: validData });
         },
         error: (err) => {
-          console.error(`[ERROR] No se pudo descargar el mes ${month}:`, err);
+          console.error(`[ERROR] Error al cargar ${month}:`, err);
           resolve({ month, data: [] });
         }
       });
@@ -97,7 +95,7 @@ function loadDashboardData() {
   }
 
   rawData = rawData.map(row => {
-    const agentName = getRowValue(row, 'PROMOTOR').toString().trim().toUpperCase();
+    const agentName = getRowValue(row, 'PROMOTOR').toUpperCase();
     const activeMonths = agentMonthsMap[agentName] || [];
     const formattedMonths = activeMonths
       .map(m => m.charAt(0).toUpperCase() + m.slice(1))
@@ -134,7 +132,7 @@ function buildAgentMonthsMap() {
   const map = {};
   Object.keys(allMonthsData).forEach(month => {
     allMonthsData[month].forEach(row => {
-      const agent = getRowValue(row, 'PROMOTOR').toString().trim().toUpperCase();
+      const agent = getRowValue(row, 'PROMOTOR').toUpperCase();
       if (agent) {
         if (!map[agent]) map[agent] = [];
         if (!map[agent].includes(month)) {
@@ -218,7 +216,7 @@ function resetAllFilters() {
 }
 
 // ==========================================
-// 4. CAMBIO DE PESTAÑAS (TABS)
+// 4. CAMBIO DE PESTAÑAS
 // ==========================================
 function switchTab(tabName, evt) {
   document.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
@@ -269,15 +267,15 @@ function applyAgentSort() {
     let valA = getRowValue(a, column);
     let valB = getRowValue(b, column);
 
-    let numA = parseFloat(valA.toString().replace('%', '').replace(',', '.'));
-    let numB = parseFloat(valB.toString().replace('%', '').replace(',', '.'));
+    let numA = parseFloat(valA.replace('%', '').replace(',', '.'));
+    let numB = parseFloat(valB.replace('%', '').replace(',', '.'));
 
     if (!isNaN(numA) && !isNaN(numB)) {
       return isAsc ? numA - numB : numB - numA;
     }
 
-    valA = valA.toString().toLowerCase();
-    valB = valB.toString().toLowerCase();
+    valA = valA.toLowerCase();
+    valB = valB.toLowerCase();
 
     if (valA < valB) return isAsc ? -1 : 1;
     if (valA > valB) return isAsc ? 1 : -1;
@@ -290,7 +288,7 @@ function applyAgentSort() {
 function getComplianceBadge(valueStr) {
   if (!valueStr) return '<span class="status-dot dot-red"></span>0%';
   
-  let num = parseFloat(valueStr.toString().replace('%', '').replace(',', '.'));
+  let num = parseFloat(valueStr.replace('%', '').replace(',', '.'));
   if (isNaN(num)) return valueStr;
 
   let colorClass = 'dot-red';
@@ -304,7 +302,7 @@ function getComplianceBadge(valueStr) {
 }
 
 // ==========================================
-// 6. RENDERIZADO TABLA AGENTES
+// 6. RENDERIZADO TABLAS
 // ==========================================
 function renderTable(data) {
   const tbody = document.querySelector('#agents-table tbody');
@@ -342,9 +340,6 @@ function renderTable(data) {
   });
 }
 
-// ==========================================
-// 7. RENDERIZADO TABLAS LÍDERES
-// ==========================================
 function parseNum(val) {
   if (!val) return 0;
   let num = parseFloat(val.toString().replace('%', '').replace(',', '.'));
@@ -370,7 +365,7 @@ function renderGroupedTable(data, groupKey, selector, tableId) {
 
   data.forEach(row => {
     const rawLeader = getRowValue(row, groupKey);
-    const leader = rawLeader ? rawLeader.toString().trim() : `Sin ${groupKey.toLowerCase()}`;
+    const leader = rawLeader ? rawLeader.trim() : `Sin ${groupKey.toLowerCase()}`;
 
     if (!groupMap[leader]) {
       groupMap[leader] = {
@@ -442,7 +437,7 @@ function renderGroupedTable(data, groupKey, selector, tableId) {
 }
 
 // ==========================================
-// 8. INICIALIZACIÓN
+// 7. INICIALIZACIÓN
 // ==========================================
 document.addEventListener('DOMContentLoaded', () => {
   populateMonthSelector();
