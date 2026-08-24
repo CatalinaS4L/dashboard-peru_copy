@@ -1,11 +1,12 @@
 // ==========================================
-// 1. CONFIGURACIÓN DE ENLACES POR MES (Anti-Caché)
+// 1. CONFIGURACIÓN DE ENLACES POR MES (Con Proxy Anti-CORS)
 // ==========================================
 const timestamp = new Date().getTime();
+const proxy = "https://corsproxy.io/?";
 
 const MONTH_URLS = {
-  febrero: `https://docs.google.com/spreadsheets/d/e/2PACX-1vRlckyPnPqEGlq9J9wk_1HwxkfHQqt6X4wHxNtPpRg-RRATO3asLAigUxUyin9D1OS0joXIpJkG8-tL/pub?gid=0&single=true&output=csv&_cb=${timestamp}`,
-  marzo: `https://docs.google.com/spreadsheets/d/e/2PACX-1vRlckyPnPqEGlq9J9wk_1HwxkfHQqt6X4wHxNtPpRg-RRATO3asLAigUxUyin9D1OS0joXIpJkG8-tL/pub?gid=397555912&single=true&output=csv&_cb=${timestamp}`
+  febrero: `${proxy}${encodeURIComponent(`https://docs.google.com/spreadsheets/d/e/2PACX-1vRlckyPnPqEGlq9J9wk_1HwxkfHQqt6X4wHxNtPpRg-RRATO3asLAigUxUyin9D1OS0joXIpJkG8-tL/pub?gid=0&single=true&output=csv&_cb=${timestamp}`)}`,
+  marzo: `${proxy}${encodeURIComponent(`https://docs.google.com/spreadsheets/d/e/2PACX-1vRlckyPnPqEGlq9J9wk_1HwxkfHQqt6X4wHxNtPpRg-RRATO3asLAigUxUyin9D1OS0joXIpJkG8-tL/pub?gid=397555912&single=true&output=csv&_cb=${timestamp}`)}`
 };
 
 let allMonthsData = {};
@@ -24,7 +25,8 @@ let sortState = {
 // ==========================================
 function populateMonthSelector() {
   const selectMes = document.getElementById('filter-mes');
-  
+  if (!selectMes) return;
+
   Object.keys(MONTH_URLS).forEach(monthKey => {
     if (!selectMes.querySelector(`option[value="${monthKey}"]`)) {
       const option = document.createElement('option');
@@ -45,8 +47,11 @@ async function preloadAllMonths() {
         download: true,
         header: true,
         skipEmptyLines: true,
-        transformHeader: h => h.trim(),
-        complete: results => resolve({ month, data: results.data }),
+        transformHeader: h => (h ? h.trim() : ''),
+        complete: results => {
+          const validData = (results.data || []).filter(row => row && row['PROMOTOR'] && row['PROMOTOR'].trim() !== '');
+          resolve({ month, data: validData });
+        },
         error: () => resolve({ month, data: [] })
       });
     });
@@ -199,18 +204,20 @@ function resetAllFilters() {
 // ==========================================
 function switchTab(tabName, evt) {
   document.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
-  document.querySelectorAll('.tab-content').forEach(content => content.style.display = 'none');
+  
+  const tabAgents = document.getElementById('tab-agents');
+  const tabLeaders = document.getElementById('tab-leaders');
 
   if (tabName === 'agents') {
-    document.getElementById('tab-agents').style.display = 'block';
+    tabAgents.style.display = 'block';
+    tabLeaders.style.display = 'none';
   } else if (tabName === 'leaders') {
-    document.getElementById('tab-leaders').style.display = 'block';
+    tabAgents.style.display = 'none';
+    tabLeaders.style.display = 'block';
   }
 
   if (evt && evt.currentTarget) {
     evt.currentTarget.classList.add('active');
-  } else if (window.event && window.event.target) {
-    window.event.target.classList.add('active');
   }
 }
 
@@ -291,6 +298,7 @@ function getComplianceBadge(valueStr) {
 // ==========================================
 function renderTable(data) {
   const tbody = document.querySelector('#agents-table tbody');
+  if (!tbody) return;
   tbody.innerHTML = '';
 
   if (!data || data.length === 0) {
@@ -339,6 +347,7 @@ function renderLeadersTables(data) {
 
 function renderGroupedTable(data, groupKey, selector, tableId) {
   const tbody = document.querySelector(selector);
+  if (!tbody) return;
   tbody.innerHTML = '';
 
   if (!data || data.length === 0) {
