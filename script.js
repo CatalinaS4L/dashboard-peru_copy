@@ -35,17 +35,28 @@ function getRowValue(row, keyName) {
   return actualKey ? row[actualKey].toString().trim() : '';
 }
 
-// Función auxiliar para extraer el valor exacto según las etiquetas personalizadas
-function parseSessionField(fullText, labelPattern) {
+// Lista exacta de palabras clave con emojis (Case-Sensitive)
+const EXACT_KEYWORDS = [
+  "📅 Fecha",
+  "🔗 URLTr:",
+  "🗣️ Speech:",
+  "📚 Producto:",
+  "🛡️ Objeciones:",
+  "🤝 Cierre:",
+  "📌 Acuerdos \\+ Estado:"
+];
+
+// Función auxiliar para extraer el valor exacto manteniendo la sensibilidad a mayúsculas
+function parseSessionField(fullText, exactLabel) {
   if (!fullText) return '-';
 
-  // Escapa caracteres especiales (como +) en el patrón
-  const escapedLabel = labelPattern.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  
-  // Captura el texto entre la etiqueta dada y la siguiente etiqueta conocida o el final de la cadena
+  // Escapa caracteres especiales (como +) en la etiqueta
+  const escapedLabel = exactLabel.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const lookaheadPattern = EXACT_KEYWORDS.join('|');
+
+  // Regex SENSIBLE a mayúsculas/minúsculas (sin flag 'i') para evitar ambigüedades
   const regex = new RegExp(
-    `${escapedLabel}\\s*[:\\-=]?\\s*([\\s\\S]*?)(?=(?:Fecha|URLTr|Speech|Producto|Objeciones|Cierre|Acuerdos\\s*\\+\\s*Estado)\\s*[:\\-=]|$|\n)`,
-    'i'
+    `${escapedLabel}\\s*[:\\-=]?\\s*([\\s\\S]*?)(?=(?:${lookaheadPattern})\\s*[:\\-=]|$|\n)`
   );
   
   const match = fullText.match(regex);
@@ -593,7 +604,7 @@ function renderTrainerSessions(data) {
       };
     }
 
-    // Escanear dinámicamente las columnas de sesiones (Sesión 1, Sesión 2, etc.)
+    // Escanear dinámicamente las columnas de sesiones
     Object.keys(row).forEach(key => {
       const upperKey = key.toUpperCase();
       if (upperKey.includes('SESIÓ') || upperKey.includes('SESION')) {
@@ -603,16 +614,16 @@ function renderTrainerSessions(data) {
           const matchNum = upperKey.match(/\d+/);
           const numSesion = matchNum ? matchNum[0] : '';
 
-          // 1. Extraer los campos especificando las palabras clave exactas
-          let fecha = parseSessionField(rawCellContent, 'Fecha');
-          let urlTr = parseSessionField(rawCellContent, 'URLTr');
-          let speech = parseSessionField(rawCellContent, 'Speech');
-          let producto = parseSessionField(rawCellContent, 'Producto');
-          let objeciones = parseSessionField(rawCellContent, 'Objeciones');
-          let cierre = parseSessionField(rawCellContent, 'Cierre');
-          let acuerdosEstado = parseSessionField(rawCellContent, 'Acuerdos + Estado');
+          // 1. Extraer exacto usando Emojis y Case-Sensitivity
+          let fecha = parseSessionField(rawCellContent, '📅 Fecha');
+          let urlTr = parseSessionField(rawCellContent, '🔗 URLTr:');
+          let speech = parseSessionField(rawCellContent, '🗣️ Speech:');
+          let producto = parseSessionField(rawCellContent, '📚 Producto:');
+          let objeciones = parseSessionField(rawCellContent, '🛡️ Objeciones:');
+          let cierre = parseSessionField(rawCellContent, '🤝 Cierre:');
+          let acuerdosEstado = parseSessionField(rawCellContent, '📌 Acuerdos + Estado:');
 
-          // Respaldos inteligentes por si no venían etiquetadas explícitamente en la celda
+          // Fallbacks por seguridad para URL o Fecha si vienen aisladas
           if (fecha === '-') {
             const dateMatch = rawCellContent.match(/\d{1,2}[\/\.-]\d{1,2}[\/\.-]\d{2,4}/);
             if (dateMatch) fecha = dateMatch[0];
@@ -638,7 +649,7 @@ function renderTrainerSessions(data) {
     });
   });
 
-  // Renderizado de tarjetas por Agente
+  // Renderizado en Fichas por Agente
   Object.keys(agentsMap).forEach(agentName => {
     const info = agentsMap[agentName];
     const card = document.createElement('div');
