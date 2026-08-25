@@ -35,16 +35,23 @@ function getRowValue(row, keyName) {
   return actualKey ? row[actualKey].toString().trim() : '';
 }
 
-// Función auxiliar para extraer valores por clave dentro de un texto agrupado en una sola celda
-function parseSessionField(fullText, fieldName) {
+// Función auxiliar para extraer el valor exacto según las etiquetas personalizadas
+function parseSessionField(fullText, labelPattern) {
   if (!fullText) return '-';
 
-  // Busca patrones tipo "Producto: valor", "PRODUCTO - valor", "Producto=valor"
-  const regex = new RegExp(`${fieldName}\\s*[:\\-=]?\\s*([^\\n,;]+)`, 'i');
+  // Escapa caracteres especiales (como +) en el patrón
+  const escapedLabel = labelPattern.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  
+  // Captura el texto entre la etiqueta dada y la siguiente etiqueta conocida o el final de la cadena
+  const regex = new RegExp(
+    `${escapedLabel}\\s*[:\\-=]?\\s*([\\s\\S]*?)(?=(?:Fecha|URLTr|Speech|Producto|Objeciones|Cierre|Acuerdos\\s*\\+\\s*Estado)\\s*[:\\-=]|$|\n)`,
+    'i'
+  );
+  
   const match = fullText.match(regex);
-
   if (match && match[1]) {
-    return match[1].trim();
+    const val = match[1].trim();
+    return val !== '' ? val : '-';
   }
 
   return '-';
@@ -586,7 +593,7 @@ function renderTrainerSessions(data) {
       };
     }
 
-    // Escanear dinámicamente las columnas de sesiones
+    // Escanear dinámicamente las columnas de sesiones (Sesión 1, Sesión 2, etc.)
     Object.keys(row).forEach(key => {
       const upperKey = key.toUpperCase();
       if (upperKey.includes('SESIÓ') || upperKey.includes('SESION')) {
@@ -596,47 +603,42 @@ function renderTrainerSessions(data) {
           const matchNum = upperKey.match(/\d+/);
           const numSesion = matchNum ? matchNum[0] : '';
 
-          // 1. Intentar obtener valores de columnas independientes si existen
-          let urlTr = getRowValue(row, `URLTR SESION ${numSesion}`) || getRowValue(row, `URL TR ${numSesion}`);
-          let producto = getRowValue(row, `PRODUCTO SESION ${numSesion}`);
-          let objeciones = getRowValue(row, `OBJECIONES SESION ${numSesion}`);
-          let cierre = getRowValue(row, `CIERRE SESION ${numSesion}`);
-          let acuerdos = getRowValue(row, `ACUERDOS SESION ${numSesion}`) || getRowValue(row, `ACUERDOS + ESTADO ${numSesion}`);
-          let fecha = rawCellContent;
+          // 1. Extraer los campos especificando las palabras clave exactas
+          let fecha = parseSessionField(rawCellContent, 'Fecha');
+          let urlTr = parseSessionField(rawCellContent, 'URLTr');
+          let speech = parseSessionField(rawCellContent, 'Speech');
+          let producto = parseSessionField(rawCellContent, 'Producto');
+          let objeciones = parseSessionField(rawCellContent, 'Objeciones');
+          let cierre = parseSessionField(rawCellContent, 'Cierre');
+          let acuerdosEstado = parseSessionField(rawCellContent, 'Acuerdos + Estado');
 
-          // 2. Si venía todo agrupado en una sola celda, parsear usando la función parseSessionField
-          if (!producto || producto === '') producto = parseSessionField(rawCellContent, 'Producto');
-          if (!objeciones || objeciones === '') objeciones = parseSessionField(rawCellContent, 'Objeciones');
-          if (!cierre || cierre === '') cierre = parseSessionField(rawCellContent, 'Cierre');
-          if (!acuerdos || acuerdos === '') acuerdos = parseSessionField(rawCellContent, 'Acuerdos');
-
-          // Detectar enlace URL (http/https) si viene dentro del texto
-          const urlMatch = rawCellContent.match(/https?:\/\/[^\s]+/i);
-          if (urlMatch && (!urlTr || urlTr === '-')) {
-            urlTr = urlMatch[0];
+          // Respaldos inteligentes por si no venían etiquetadas explícitamente en la celda
+          if (fecha === '-') {
+            const dateMatch = rawCellContent.match(/\d{1,2}[\/\.-]\d{1,2}[\/\.-]\d{2,4}/);
+            if (dateMatch) fecha = dateMatch[0];
           }
 
-          // Detectar formato de fecha (DD/MM/AAAA o DD-MM-YYYY) dentro del texto
-          const dateMatch = rawCellContent.match(/\d{1,2}[\/\.-]\d{1,2}[\/\.-]\d{2,4}/);
-          if (dateMatch) {
-            fecha = dateMatch[0];
+          if (urlTr === '-') {
+            const urlMatch = rawCellContent.match(/https?:\/\/[^\s]+/i);
+            if (urlMatch) urlTr = urlMatch[0];
           }
 
           agentsMap[agent].sessions.push({
             num: numSesion ? `Sesión ${numSesion}` : key,
-            fecha: fecha || '-',
-            urlTr: urlTr || '-',
-            producto: producto !== '-' ? producto : 'No especificado',
-            objeciones: objeciones !== '-' ? objeciones : 'Sin objeciones',
-            cierre: cierre !== '-' ? cierre : '-',
-            acuerdos: acuerdos !== '-' ? acuerdos : rawCellContent
+            fecha: fecha,
+            urlTr: urlTr,
+            speech: speech,
+            producto: producto,
+            objeciones: objeciones,
+            cierre: cierre,
+            acuerdosEstado: acuerdosEstado !== '-' ? acuerdosEstado : rawCellContent
           });
         }
       }
     });
   });
 
-  // Renderizado de fichas por Agente
+  // Renderizado de tarjetas por Agente
   Object.keys(agentsMap).forEach(agentName => {
     const info = agentsMap[agentName];
     const card = document.createElement('div');
@@ -654,10 +656,11 @@ function renderTrainerSessions(data) {
           </div>
           <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 8px; font-size: 0.9em;">
             <div><strong>URLTr:</strong> ${s.urlTr !== '-' ? `<a href="${s.urlTr}" target="_blank">Ver Enlace</a>` : '-'}</div>
+            <div><strong>Speech:</strong> ${s.speech}</div>
             <div><strong>Producto:</strong> ${s.producto}</div>
             <div><strong>Objeciones:</strong> ${s.objeciones}</div>
             <div><strong>Cierre:</strong> ${s.cierre}</div>
-            <div style="grid-column: 1 / -1;"><strong>Acuerdos / Detalle:</strong> ${s.acuerdos}</div>
+            <div style="grid-column: 1 / -1;"><strong>Acuerdos + Estado:</strong> ${s.acuerdosEstado}</div>
           </div>
         </div>
       `).join('');
