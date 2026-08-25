@@ -175,11 +175,7 @@ function renderAllTables() {
     renderTable(filteredData);
   }
 
-  if (sortState['focus-table'].column) {
-    applyAgentSort('focus-table');
-  } else {
-    renderFocusTable(filteredData);
-  }
+  renderFocusTable(filteredData);
 
   renderLeadersTables(filteredData);
   
@@ -336,8 +332,10 @@ function handleSort(tableId, columnKey) {
     current.isAsc = true;
   }
 
-  if (tableId === 'agents-table' || tableId === 'focus-table') {
-    applyAgentSort(tableId);
+  if (tableId === 'agents-table') {
+    applyAgentSort('agents-table');
+  } else if (tableId === 'focus-table') {
+    renderFocusTable(filteredData);
   } else if (tableId === 'supervisors-table') {
     renderGroupedTable(filteredData, 'SUPERVISOR', '#supervisors-table tbody', 'supervisors-table');
   } else if (tableId === 'coordinators-table') {
@@ -367,17 +365,13 @@ function applyAgentSort(tableId) {
     return 0;
   });
 
-  if (tableId === 'agents-table') {
-    renderTable(filteredData);
-  } else if (tableId === 'focus-table') {
-    renderFocusTable(filteredData);
-  }
+  renderTable(filteredData);
 }
 
 function getComplianceBadge(valueStr) {
-  if (!valueStr) return '<span class="status-dot dot-red"></span>0%';
+  if (!valueStr || valueStr === '-') return '-';
   
-  let num = parseFloat(valueStr.replace('%', '').replace(',', '.'));
+  let num = parseFloat(valueStr.toString().replace('%', '').replace(',', '.'));
   if (isNaN(num)) return valueStr;
 
   let colorClass = 'dot-red';
@@ -429,33 +423,91 @@ function renderTable(data) {
   });
 }
 
+// TABLA FOCO: Agrupada por Agente con Cierre y Cumpl.% por Mes
 function renderFocusTable(data) {
-  const tbody = document.querySelector('#focus-table tbody');
-  if (!tbody) return;
+  const table = document.getElementById('focus-table');
+  if (!table) return;
+  
+  const thead = table.querySelector('thead');
+  const tbody = table.querySelector('tbody');
+  thead.innerHTML = '';
   tbody.innerHTML = '';
 
   if (!data || data.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;">No hay datos disponibles.</td></tr>';
+    tbody.innerHTML = '<tr><td style="text-align:center;">No hay datos disponibles.</td></tr>';
     return;
   }
 
+  // 1. Obtener la lista de meses a desplegar (según el selector de mes o todos)
+  const selectedMonth = document.getElementById('filter-mes').value;
+  let monthsToDisplay = selectedMonth === 'todos' ? Object.keys(MONTH_URLS) : [selectedMonth];
+
+  // Build Table Headers
+  let headerHTML = '<tr><th onclick="handleSort(\'focus-table\', \'PROMOTOR\')">Agente</th>';
+  monthsToDisplay.forEach(m => {
+    const mesFormatted = m.charAt(0).toUpperCase() + m.slice(1);
+    headerHTML += `<th style="text-align:center;">Cierre (${mesFormatted})</th>`;
+    headerHTML += `<th style="text-align:center;">Cumpl. % (${mesFormatted})</th>`;
+  });
+  headerHTML += '</tr>';
+  thead.innerHTML = headerHTML;
+
+  // 2. Agrupar datos por nombre de Promotor
+  const agentsMap = {};
+
   data.forEach(row => {
-    const metaVal = getRowValue(row, 'META');
-    const complianceVal = getRowValue(row, 'CUMPLIMIENTO MES');
-    const complianceHTML = getComplianceBadge(complianceVal);
+    const agentName = getRowValue(row, 'PROMOTOR');
+    if (!agentName) return;
 
-    const notaFinalVal = getRowValue(row, 'NOTA FINAL');
-    const notaFinalHTML = getComplianceBadge(notaFinalVal);
+    if (!agentsMap[agentName]) {
+      agentsMap[agentName] = {
+        agentName: agentName,
+        monthsData: {}
+      };
+    }
 
+    const mesOrigen = row._MES_ORIGEN;
+    if (mesOrigen) {
+      agentsMap[agentName].monthsData[mesOrigen] = {
+        cierre: getRowValue(row, 'CIERRE') || '0',
+        cumplimiento: getRowValue(row, 'CUMPLIMIENTO MES') || '-'
+      };
+    }
+  });
+
+  let agentsList = Object.values(agentsMap);
+
+  // Aplicar ordenamiento si está configurado
+  const sortInfo = sortState['focus-table'];
+  if (sortInfo && sortInfo.column === 'PROMOTOR') {
+    agentsList.sort((a, b) => {
+      const valA = a.agentName.toLowerCase();
+      const valB = b.agentName.toLowerCase();
+      if (valA < valB) return sortInfo.isAsc ? -1 : 1;
+      if (valA > valB) return sortInfo.isAsc ? 1 : -1;
+      return 0;
+    });
+  }
+
+  // 3. Renderizar Filas de Agentes
+  agentsList.forEach(agent => {
     const tr = document.createElement('tr');
-    tr.innerHTML = `
-      <td><strong>${getRowValue(row, 'PROMOTOR') || '-'}</strong></td>
-      <td>${metaVal || '0'}</td>
-      <td>${getRowValue(row, 'CIERRE') || '0'}</td>
-      <td>${complianceHTML}</td>
-      <td>${notaFinalHTML}</td>
-      <td>${row['MESES_ACTIVO'] || '-'}</td>
-    `;
+    let rowHTML = `<td><strong>${agent.agentName}</strong></td>`;
+
+    monthsToDisplay.forEach(m => {
+      const monthRecord = agent.monthsData[m];
+      if (monthRecord) {
+        const cierre = monthRecord.cierre;
+        const cumplHTML = getComplianceBadge(monthRecord.cumplimiento);
+        rowHTML += `<td style="text-align:center;">${cierre}</td>`;
+        rowHTML += `<td style="text-align:center;">${cumplHTML}</td>`;
+      } else {
+        rowHTML += `<td style="text-align:center; color: #999;">-</td>`;
+        rowHTML += `<td style="text-align:center; color: #999;">-</td>`;
+      }
+    });
+
+    tr.innerHTML = rowHTML;
     tbody.appendChild(tr);
   });
 }
