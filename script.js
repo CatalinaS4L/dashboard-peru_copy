@@ -35,6 +35,21 @@ function getRowValue(row, keyName) {
   return actualKey ? row[actualKey].toString().trim() : '';
 }
 
+// Función auxiliar para extraer valores por clave dentro de un texto agrupado en una sola celda
+function parseSessionField(fullText, fieldName) {
+  if (!fullText) return '-';
+
+  // Busca patrones tipo "Producto: valor", "PRODUCTO - valor", "Producto=valor"
+  const regex = new RegExp(`${fieldName}\\s*[:\\-=]?\\s*([^\\n,;]+)`, 'i');
+  const match = fullText.match(regex);
+
+  if (match && match[1]) {
+    return match[1].trim();
+  }
+
+  return '-';
+}
+
 // ==========================================
 // 2. CARGA DE DATOS
 // ==========================================
@@ -133,7 +148,7 @@ function loadDashboardData() {
   resetSelect('filter-status');
 
   populateFilters(rawData);
-  filterData(); // Aplica búsqueda y filtros actuales
+  filterData();
 }
 
 function renderAllTables() {
@@ -235,7 +250,7 @@ function filterData() {
 function resetAllFilters() {
   const searchInput = document.getElementById('filter-search');
   if (searchInput) searchInput.value = '';
-  
+
   document.getElementById('filter-mes').value = 'todos';
   document.getElementById('filter-trainer').value = '';
   document.getElementById('filter-supervisor').value = '';
@@ -571,28 +586,57 @@ function renderTrainerSessions(data) {
       };
     }
 
+    // Escanear dinámicamente las columnas de sesiones
     Object.keys(row).forEach(key => {
       const upperKey = key.toUpperCase();
       if (upperKey.includes('SESIÓ') || upperKey.includes('SESION')) {
-        const fecha = getRowValue(row, key);
-        if (fecha && fecha !== '-') {
+        const rawCellContent = getRowValue(row, key);
+
+        if (rawCellContent && rawCellContent !== '-') {
           const matchNum = upperKey.match(/\d+/);
           const numSesion = matchNum ? matchNum[0] : '';
-          
+
+          // 1. Intentar obtener valores de columnas independientes si existen
+          let urlTr = getRowValue(row, `URLTR SESION ${numSesion}`) || getRowValue(row, `URL TR ${numSesion}`);
+          let producto = getRowValue(row, `PRODUCTO SESION ${numSesion}`);
+          let objeciones = getRowValue(row, `OBJECIONES SESION ${numSesion}`);
+          let cierre = getRowValue(row, `CIERRE SESION ${numSesion}`);
+          let acuerdos = getRowValue(row, `ACUERDOS SESION ${numSesion}`) || getRowValue(row, `ACUERDOS + ESTADO ${numSesion}`);
+          let fecha = rawCellContent;
+
+          // 2. Si venía todo agrupado en una sola celda, parsear usando la función parseSessionField
+          if (!producto || producto === '') producto = parseSessionField(rawCellContent, 'Producto');
+          if (!objeciones || objeciones === '') objeciones = parseSessionField(rawCellContent, 'Objeciones');
+          if (!cierre || cierre === '') cierre = parseSessionField(rawCellContent, 'Cierre');
+          if (!acuerdos || acuerdos === '') acuerdos = parseSessionField(rawCellContent, 'Acuerdos');
+
+          // Detectar enlace URL (http/https) si viene dentro del texto
+          const urlMatch = rawCellContent.match(/https?:\/\/[^\s]+/i);
+          if (urlMatch && (!urlTr || urlTr === '-')) {
+            urlTr = urlMatch[0];
+          }
+
+          // Detectar formato de fecha (DD/MM/AAAA o DD-MM-YYYY) dentro del texto
+          const dateMatch = rawCellContent.match(/\d{1,2}[\/\.-]\d{1,2}[\/\.-]\d{2,4}/);
+          if (dateMatch) {
+            fecha = dateMatch[0];
+          }
+
           agentsMap[agent].sessions.push({
             num: numSesion ? `Sesión ${numSesion}` : key,
-            fecha: fecha,
-            urlTr: getRowValue(row, `URLTR SESION ${numSesion}`) || getRowValue(row, `URLTR SESIÓ ${numSesion}`) || getRowValue(row, `URL TR ${numSesion}`) || '-',
-            producto: getRowValue(row, `PRODUCTO SESION ${numSesion}`) || getRowValue(row, `PRODUCTO SESIÓ ${numSesion}`) || '-',
-            objeciones: getRowValue(row, `OBJECIONES SESION ${numSesion}`) || getRowValue(row, `OBJECIONES SESIÓ ${numSesion}`) || '-',
-            cierre: getRowValue(row, `CIERRE SESION ${numSesion}`) || getRowValue(row, `CIERRE SESIÓ ${numSesion}`) || '-',
-            acuerdos: getRowValue(row, `ACUERDOS SESION ${numSesion}`) || getRowValue(row, `ACUERDOS SESIÓ ${numSesion}`) || getRowValue(row, `ACUERDOS + ESTADO ${numSesion}`) || '-'
+            fecha: fecha || '-',
+            urlTr: urlTr || '-',
+            producto: producto !== '-' ? producto : 'No especificado',
+            objeciones: objeciones !== '-' ? objeciones : 'Sin objeciones',
+            cierre: cierre !== '-' ? cierre : '-',
+            acuerdos: acuerdos !== '-' ? acuerdos : rawCellContent
           });
         }
       }
     });
   });
 
+  // Renderizado de fichas por Agente
   Object.keys(agentsMap).forEach(agentName => {
     const info = agentsMap[agentName];
     const card = document.createElement('div');
@@ -613,7 +657,7 @@ function renderTrainerSessions(data) {
             <div><strong>Producto:</strong> ${s.producto}</div>
             <div><strong>Objeciones:</strong> ${s.objeciones}</div>
             <div><strong>Cierre:</strong> ${s.cierre}</div>
-            <div style="grid-column: 1 / -1;"><strong>Acuerdos + Estado:</strong> ${s.acuerdos}</div>
+            <div style="grid-column: 1 / -1;"><strong>Acuerdos / Detalle:</strong> ${s.acuerdos}</div>
           </div>
         </div>
       `).join('');
