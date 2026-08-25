@@ -46,15 +46,13 @@ const EXACT_KEYWORDS = [
   "📌 Acuerdos \\+ Estado:"
 ];
 
-// Función auxiliar para extraer el valor exacto manteniendo la sensibilidad a mayúsculas
+// Función auxiliar para extraer el valor exacto según las etiquetas personalizadas
 function parseSessionField(fullText, exactLabel) {
   if (!fullText) return '-';
 
-  // Escapa caracteres especiales (como +) en la etiqueta
   const escapedLabel = exactLabel.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
   const lookaheadPattern = EXACT_KEYWORDS.join('|');
 
-  // Regex SENSIBLE a mayúsculas/minúsculas (sin flag 'i') para evitar ambigüedades
   const regex = new RegExp(
     `${escapedLabel}\\s*[:\\-=]?\\s*([\\s\\S]*?)(?=(?:${lookaheadPattern})\\s*[:\\-=]|$|\n)`
   );
@@ -589,17 +587,24 @@ function renderTrainerSessions(data) {
     return;
   }
 
-  const agentsMap = {};
+  const agentMonthMap = {};
 
   data.forEach(row => {
     const agent = getRowValue(row, 'PROMOTOR') || 'Sin Nombre';
-    if (!agentsMap[agent]) {
-      agentsMap[agent] = {
+    const mesOrigen = row._MES_ORIGEN || 'desconocido';
+    const mesFormatted = mesOrigen.charAt(0).toUpperCase() + mesOrigen.slice(1);
+    
+    // Clave única combinando Promotor + Mes para independizar recuadros
+    const uniqueKey = `${agent}_${mesOrigen}`;
+
+    if (!agentMonthMap[uniqueKey]) {
+      agentMonthMap[uniqueKey] = {
+        agentName: agent,
+        mesLabel: `${mesFormatted} 2026`,
         trainer: getRowValue(row, 'TRAINER') || '-',
         supervisor: getRowValue(row, 'SUPERVISOR') || '-',
         coordinador: getRowValue(row, 'COORDINADOR') || '-',
         status: getRowValue(row, 'STATUS AGENTE') || '-',
-        mesOrigen: row._MES_ORIGEN || '',
         sessions: []
       };
     }
@@ -614,7 +619,7 @@ function renderTrainerSessions(data) {
           const matchNum = upperKey.match(/\d+/);
           const numSesion = matchNum ? matchNum[0] : '';
 
-          // 1. Extraer exacto usando Emojis y Case-Sensitivity
+          // Extracción con Emojis y Case-Sensitivity
           let fecha = parseSessionField(rawCellContent, '📅 Fecha');
           let urlTr = parseSessionField(rawCellContent, '🔗 URLTr:');
           let speech = parseSessionField(rawCellContent, '🗣️ Speech:');
@@ -623,7 +628,6 @@ function renderTrainerSessions(data) {
           let cierre = parseSessionField(rawCellContent, '🤝 Cierre:');
           let acuerdosEstado = parseSessionField(rawCellContent, '📌 Acuerdos + Estado:');
 
-          // Fallbacks por seguridad para URL o Fecha si vienen aisladas
           if (fecha === '-') {
             const dateMatch = rawCellContent.match(/\d{1,2}[\/\.-]\d{1,2}[\/\.-]\d{2,4}/);
             if (dateMatch) fecha = dateMatch[0];
@@ -634,7 +638,7 @@ function renderTrainerSessions(data) {
             if (urlMatch) urlTr = urlMatch[0];
           }
 
-          agentsMap[agent].sessions.push({
+          agentMonthMap[uniqueKey].sessions.push({
             num: numSesion ? `Sesión ${numSesion}` : key,
             fecha: fecha,
             urlTr: urlTr,
@@ -649,16 +653,16 @@ function renderTrainerSessions(data) {
     });
   });
 
-  // Renderizado en Fichas por Agente
-  Object.keys(agentsMap).forEach(agentName => {
-    const info = agentsMap[agentName];
+  // Renderizar una tarjeta individual por cada [Promotor + Mes]
+  Object.keys(agentMonthMap).forEach(key => {
+    const info = agentMonthMap[key];
     const card = document.createElement('div');
     card.className = 'table-card agent-session-card';
     card.style.marginBottom = '20px';
 
     let sessionsHTML = '';
     if (info.sessions.length === 0) {
-      sessionsHTML = '<p style="color: #777; font-style: italic;">Sin sesiones registradas este mes.</p>';
+      sessionsHTML = '<p style="color: #777; font-style: italic;">Sin sesiones registradas en este mes.</p>';
     } else {
       sessionsHTML = info.sessions.map(s => `
         <div class="session-block" style="border: 1px solid #e0e0e0; border-radius: 6px; padding: 12px; margin-top: 10px; background-color: #f9f9f9;">
@@ -679,7 +683,12 @@ function renderTrainerSessions(data) {
 
     card.innerHTML = `
       <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #3498db; padding-bottom: 8px; margin-bottom: 12px;">
-        <h3 style="margin: 0; color: #2c3e50;">${agentName}</h3>
+        <div>
+          <h3 style="margin: 0; color: #2c3e50; display: inline-block; margin-right: 10px;">${info.agentName}</h3>
+          <span style="background: #2c3e50; color: #fff; font-size: 0.78em; padding: 3px 8px; border-radius: 12px; font-weight: bold; vertical-align: middle;">
+            📅 ${info.mesLabel}
+          </span>
+        </div>
         <span style="font-size: 0.85em; background: #e8f4fc; color: #2980b9; padding: 4px 8px; border-radius: 4px; font-weight: bold;">
           Status: ${info.status}
         </span>
