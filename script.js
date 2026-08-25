@@ -14,6 +14,7 @@ const MONTH_URLS = {
 let allMonthsData = {};
 let rawData = [];
 let filteredData = [];
+let focusCharts = []; // Almacena instancias de Chart.js en la tabla Foco
 
 let sortState = {
   'agents-table': { column: null, isAsc: true },
@@ -22,7 +23,7 @@ let sortState = {
   'coordinators-table': { column: null, isAsc: true }
 };
 
-// Función de lectura tolerante a prefijos
+// Función de lectura tolerante a prefijos o saltos de línea
 function getRowValue(row, keyName) {
   if (!row) return '';
   const targetKey = keyName.trim().toUpperCase();
@@ -36,7 +37,7 @@ function getRowValue(row, keyName) {
   return actualKey ? row[actualKey].toString().trim() : '';
 }
 
-// Lista exacta de palabras clave con emojis (Case-Sensitive)
+// Lista exacta de palabras clave para parsear sesiones
 const EXACT_KEYWORDS = [
   "📅 Fecha",
   "🔗 URLTr:",
@@ -47,7 +48,6 @@ const EXACT_KEYWORDS = [
   "📌 Acuerdos \\+ Estado:"
 ];
 
-// Función auxiliar para extraer el valor exacto según las etiquetas personalizadas
 function parseSessionField(fullText, exactLabel) {
   if (!fullText) return '-';
 
@@ -96,8 +96,6 @@ async function preloadAllMonths() {
         skipEmptyLines: 'greedy',
         transformHeader: h => (h ? h.replace(/[\r\n]/g, '').trim() : ''),
         complete: results => {
-          console.log(`[OK] Descargado ${month}:`, results.data);
-
           const validData = (results.data || []).map(row => ({
             ...row,
             _MES_ORIGEN: month
@@ -106,7 +104,6 @@ async function preloadAllMonths() {
             return agentVal && agentVal !== '';
           });
 
-          console.log(`[FILTRADO] Filas válidas para ${month}: ${validData.length}`);
           resolve({ month, data: validData });
         },
         error: (err) => {
@@ -176,7 +173,6 @@ function renderAllTables() {
   }
 
   renderFocusTable(filteredData);
-
   renderLeadersTables(filteredData);
   
   const tabTrends = document.getElementById('tab-trends');
@@ -319,7 +315,7 @@ function switchTab(tabName, evt) {
 }
 
 // ==========================================
-// 5. ORDENAMIENTO
+// 5. ORDENAMIENTO & INSIGNIAS
 // ==========================================
 function handleSort(tableId, columnKey) {
   const current = sortState[tableId];
@@ -368,6 +364,12 @@ function applyAgentSort(tableId) {
   renderTable(filteredData);
 }
 
+function parseNum(val) {
+  if (!val) return 0;
+  let num = parseFloat(val.toString().replace('%', '').replace(',', '.'));
+  return isNaN(num) ? 0 : num;
+}
+
 function getComplianceBadge(valueStr) {
   if (!valueStr || valueStr === '-') return '-';
   
@@ -385,8 +387,10 @@ function getComplianceBadge(valueStr) {
 }
 
 // ==========================================
-// 6. RENDERIZADO TABLAS Y TARJETAS
+// 6. RENDERIZADO DE TABLAS
 // ==========================================
+
+// TABLA 1: Listado General de Agentes
 function renderTable(data) {
   const tbody = document.querySelector('#agents-table tbody');
   if (!tbody) return;
@@ -423,7 +427,7 @@ function renderTable(data) {
   });
 }
 
-// TABLA FOCO: Agrupada por Agente con Cierre y Cumpl.% por Mes
+// TABLA FOCO: Matriz por Agente con Cierre, Cumpl. % por Mes y Gráficos
 function renderFocusTable(data) {
   const table = document.getElementById('focus-table');
   if (!table) return;
@@ -433,26 +437,29 @@ function renderFocusTable(data) {
   thead.innerHTML = '';
   tbody.innerHTML = '';
 
+  // Limpiar gráficos anteriores para optimizar el rendimiento
+  focusCharts.forEach(chart => chart.destroy());
+  focusCharts = [];
+
   if (!data || data.length === 0) {
     tbody.innerHTML = '<tr><td style="text-align:center;">No hay datos disponibles.</td></tr>';
     return;
   }
 
-  // 1. Obtener la lista de meses a desplegar (según el selector de mes o todos)
   const selectedMonth = document.getElementById('filter-mes').value;
   let monthsToDisplay = selectedMonth === 'todos' ? Object.keys(MONTH_URLS) : [selectedMonth];
 
-  // Build Table Headers
+  // Generar Encabezados de Tabla Dinámicamente
   let headerHTML = '<tr><th onclick="handleSort(\'focus-table\', \'PROMOTOR\')">Agente</th>';
   monthsToDisplay.forEach(m => {
     const mesFormatted = m.charAt(0).toUpperCase() + m.slice(1);
     headerHTML += `<th style="text-align:center;">Cierre (${mesFormatted})</th>`;
     headerHTML += `<th style="text-align:center;">Cumpl. % (${mesFormatted})</th>`;
   });
-  headerHTML += '</tr>';
+  headerHTML += '<th style="text-align:center; min-width: 180px;">Gráfico de Performance</th></tr>';
   thead.innerHTML = headerHTML;
 
-  // 2. Agrupar datos por nombre de Promotor
+  // Agrupar por Promotor
   const agentsMap = {};
 
   data.forEach(row => {
@@ -469,7 +476,7 @@ function renderFocusTable(data) {
     const mesOrigen = row._MES_ORIGEN;
     if (mesOrigen) {
       agentsMap[agentName].monthsData[mesOrigen] = {
-        cierre: getRowValue(row, 'CIERRE') || '0',
+        cierre: parseNum(getRowValue(row, 'CIERRE')),
         cumplimiento: getRowValue(row, 'CUMPLIMIENTO MES') || '-'
       };
     }
@@ -477,7 +484,6 @@ function renderFocusTable(data) {
 
   let agentsList = Object.values(agentsMap);
 
-  // Aplicar ordenamiento si está configurado
   const sortInfo = sortState['focus-table'];
   if (sortInfo && sortInfo.column === 'PROMOTOR') {
     agentsList.sort((a, b) => {
@@ -489,33 +495,87 @@ function renderFocusTable(data) {
     });
   }
 
-  // 3. Renderizar Filas de Agentes
-  agentsList.forEach(agent => {
+  // Renderizar filas e incrustar Canvas para Chart.js
+  agentsList.forEach((agent, index) => {
     const tr = document.createElement('tr');
     let rowHTML = `<td><strong>${agent.agentName}</strong></td>`;
+    
+    const chartLabels = [];
+    const chartData = [];
 
     monthsToDisplay.forEach(m => {
+      const mesFormatted = m.charAt(0).toUpperCase() + m.slice(1);
       const monthRecord = agent.monthsData[m];
+      
+      chartLabels.push(mesFormatted);
+
       if (monthRecord) {
         const cierre = monthRecord.cierre;
         const cumplHTML = getComplianceBadge(monthRecord.cumplimiento);
         rowHTML += `<td style="text-align:center;">${cierre}</td>`;
         rowHTML += `<td style="text-align:center;">${cumplHTML}</td>`;
+        chartData.push(cierre);
       } else {
         rowHTML += `<td style="text-align:center; color: #999;">-</td>`;
         rowHTML += `<td style="text-align:center; color: #999;">-</td>`;
+        chartData.push(0);
       }
     });
 
+    const canvasId = `chart-agent-${index}`;
+    rowHTML += `
+      <td style="text-align:center; padding: 5px;">
+        <div style="width: 170px; height: 45px; margin: 0 auto;">
+          <canvas id="${canvasId}"></canvas>
+        </div>
+      </td>
+    `;
+
     tr.innerHTML = rowHTML;
     tbody.appendChild(tr);
-  });
-}
 
-function parseNum(val) {
-  if (!val) return 0;
-  let num = parseFloat(val.toString().replace('%', '').replace(',', '.'));
-  return isNaN(num) ? 0 : num;
+    // Dibujar Gráfico de Barras por Agente
+    const ctx = document.getElementById(canvasId)?.getContext('2d');
+    if (ctx) {
+      const newChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: chartLabels,
+          datasets: [{
+            label: 'Cierre',
+            data: chartData,
+            backgroundColor: '#3498db',
+            borderRadius: 4,
+            maxBarThickness: 15
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              callbacks: {
+                label: (context) => ` Cierre: ${context.raw}`
+              }
+            }
+          },
+          scales: {
+            x: {
+              grid: { display: false },
+              ticks: { font: { size: 9 } }
+            },
+            y: {
+              display: false,
+              beginAtZero: true
+            }
+          }
+        }
+      });
+
+      focusCharts.push(newChart);
+    }
+  });
 }
 
 function renderLeadersTables(data) {
@@ -691,7 +751,6 @@ function renderTrainerSessions(data) {
     const mesOrigen = row._MES_ORIGEN || 'desconocido';
     const mesFormatted = mesOrigen.charAt(0).toUpperCase() + mesOrigen.slice(1);
     
-    // Clave única combinando Promotor + Mes para independizar recuadros
     const uniqueKey = `${agent}_${mesOrigen}`;
 
     if (!agentMonthMap[uniqueKey]) {
@@ -706,7 +765,6 @@ function renderTrainerSessions(data) {
       };
     }
 
-    // Escanear dinámicamente las columnas de sesiones
     Object.keys(row).forEach(key => {
       const upperKey = key.toUpperCase();
       if (upperKey.includes('SESIÓ') || upperKey.includes('SESION')) {
@@ -716,7 +774,6 @@ function renderTrainerSessions(data) {
           const matchNum = upperKey.match(/\d+/);
           const numSesion = matchNum ? matchNum[0] : '';
 
-          // Extracción con Emojis y Case-Sensitivity
           let fecha = parseSessionField(rawCellContent, '📅 Fecha');
           let urlTr = parseSessionField(rawCellContent, '🔗 URLTr:');
           let speech = parseSessionField(rawCellContent, '🗣️ Speech:');
@@ -750,7 +807,6 @@ function renderTrainerSessions(data) {
     });
   });
 
-  // Renderizar una tarjeta individual por cada [Promotor + Mes]
   Object.keys(agentMonthMap).forEach(key => {
     const info = agentMonthMap[key];
     const card = document.createElement('div');
