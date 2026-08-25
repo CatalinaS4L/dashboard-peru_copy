@@ -25,6 +25,7 @@
     <div class="tabs-container">
       <button class="tab-button active" onclick="switchTab('agents', event)">Rendimiento por Agente</button>
       <button class="tab-button" onclick="switchTab('leaders', event)">Acumulativo por Líder</button>
+      <button class="tab-button" onclick="switchTab('trends', event)">Tendencias Semanales</button>
     </div>
 
     <!-- 2. BARRA DE FILTROS -->
@@ -60,7 +61,7 @@
       </div>
     </section>
 
-<!-- 3. TAB 1: Tabla de Agentes -->
+    <!-- 3. TAB 1: Tabla de Agentes -->
     <section id="tab-agents" class="table-card tab-content active">
       <h2>Listado de Agentes</h2>
       <div class="table-wrapper">
@@ -131,6 +132,32 @@
                 <th onclick="handleSort('coordinators-table', 'v5')">V5</th>
                 <th onclick="handleSort('coordinators-table', 'cierre')">Cierre Total</th>
                 <th onclick="handleSort('coordinators-table', 'compliancePct')">Cumplimiento Promedio %</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- 5. TAB 3: Tendencias Semanales -->
+    <section id="tab-trends" class="tab-content" style="display: none;">
+      <div class="table-card">
+        <h2>Evolución Semanal de Ventas por Mes</h2>
+        <div class="table-wrapper">
+          <table id="trends-table">
+            <thead>
+              <tr>
+                <th>Mes</th>
+                <th>Total Agentes</th>
+                <th>Meta Total</th>
+                <th>V1</th>
+                <th>V2</th>
+                <th>V3</th>
+                <th>V4</th>
+                <th>V5</th>
+                <th>Cierre Acumulado</th>
+                <th>% Cumplimiento</th>
               </tr>
             </thead>
             <tbody></tbody>

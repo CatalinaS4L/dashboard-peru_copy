@@ -108,7 +108,7 @@ function loadDashboardData() {
     const activeMonths = agentMonthsMap[agentName] || [];
     const currentRowMonth = row._MES_ORIGEN;
 
-    // Formatea los meses colocando en negrilla (<strong>) el mes correspondiente a la fila actual
+    // Formatea los meses colocando en negrilla el mes correspondiente a la fila actual
     const formattedMonths = activeMonths
       .map(m => {
         const nameFormatted = m.charAt(0).toUpperCase() + m.slice(1);
@@ -144,6 +144,12 @@ function renderAllTables() {
   }
 
   renderLeadersTables(filteredData);
+  
+  // Si la pestaña actual es la de tendencias, actualiza sus datos al filtrar
+  const tabTrends = document.getElementById('tab-trends');
+  if (tabTrends && tabTrends.style.display !== 'none') {
+    renderTrendsTable();
+  }
 }
 
 function buildAgentMonthsMap() {
@@ -241,13 +247,17 @@ function switchTab(tabName, evt) {
   
   const tabAgents = document.getElementById('tab-agents');
   const tabLeaders = document.getElementById('tab-leaders');
+  const tabTrends = document.getElementById('tab-trends');
 
-  if (tabName === 'agents') {
-    tabAgents.style.display = 'block';
-    tabLeaders.style.display = 'none';
-  } else if (tabName === 'leaders') {
-    tabAgents.style.display = 'none';
-    tabLeaders.style.display = 'block';
+  if (tabAgents) tabAgents.style.display = 'none';
+  if (tabLeaders) tabLeaders.style.display = 'none';
+  if (tabTrends) tabTrends.style.display = 'none';
+
+  if (tabName === 'agents' && tabAgents) tabAgents.style.display = 'block';
+  if (tabName === 'leaders' && tabLeaders) tabLeaders.style.display = 'block';
+  if (tabName === 'trends' && tabTrends) {
+    tabTrends.style.display = 'block';
+    renderTrendsTable();
   }
 
   if (evt && evt.currentTarget) {
@@ -448,6 +458,69 @@ function renderGroupedTable(data, groupKey, selector, tableId) {
       <td>${l.v4}</td>
       <td>${l.v5}</td>
       <td><strong>${l.cierre}</strong></td>
+      <td>${complianceHTML}</td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+function renderTrendsTable() {
+  const tbody = document.querySelector('#trends-table tbody');
+  if (!tbody) return;
+  tbody.innerHTML = '';
+
+  const monthKeys = Object.keys(allMonthsData);
+  if (monthKeys.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;">No hay datos disponibles para comparar.</td></tr>';
+    return;
+  }
+
+  monthKeys.forEach(monthKey => {
+    const monthData = allMonthsData[monthKey] || [];
+    
+    const trainerVal = document.getElementById('filter-trainer')?.value;
+    const supervisorVal = document.getElementById('filter-supervisor')?.value;
+    const coordinadorVal = document.getElementById('filter-coordinador')?.value;
+    const statusVal = document.getElementById('filter-status')?.value;
+
+    const filteredMonthData = monthData.filter(item => {
+      const matchTrainer = !trainerVal || getRowValue(item, 'TRAINER') === trainerVal;
+      const matchSupervisor = !supervisorVal || getRowValue(item, 'SUPERVISOR') === supervisorVal;
+      const matchCoordinador = !coordinadorVal || getRowValue(item, 'COORDINADOR') === coordinadorVal;
+      const matchStatus = !statusVal || getRowValue(item, 'STATUS AGENTE') === statusVal;
+      return matchTrainer && matchSupervisor && matchCoordinador && matchStatus;
+    });
+
+    let agentsCount = filteredMonthData.length;
+    let metaTotal = 0;
+    let v1 = 0, v2 = 0, v3 = 0, v4 = 0, v5 = 0;
+    let cierre = 0;
+
+    filteredMonthData.forEach(row => {
+      metaTotal += parseNum(getRowValue(row, 'META'));
+      v1 += parseNum(getRowValue(row, 'V1'));
+      v2 += parseNum(getRowValue(row, 'V2'));
+      v3 += parseNum(getRowValue(row, 'V3'));
+      v4 += parseNum(getRowValue(row, 'V4'));
+      v5 += parseNum(getRowValue(row, 'V5'));
+      cierre += parseNum(getRowValue(row, 'CIERRE'));
+    });
+
+    const compliancePct = metaTotal > 0 ? ((cierre / metaTotal) * 100) : 0;
+    const complianceHTML = getComplianceBadge(compliancePct.toString());
+    const monthFormatted = monthKey.charAt(0).toUpperCase() + monthKey.slice(1);
+
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td><strong>${monthFormatted} 2026</strong></td>
+      <td>${agentsCount}</td>
+      <td>${metaTotal}</td>
+      <td>${v1}</td>
+      <td>${v2}</td>
+      <td>${v3}</td>
+      <td>${v4}</td>
+      <td>${v5}</td>
+      <td><strong>${cierre}</strong></td>
       <td>${complianceHTML}</td>
     `;
     tbody.appendChild(tr);
