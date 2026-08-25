@@ -21,7 +21,7 @@ let sortState = {
   'coordinators-table': { column: null, isAsc: true }
 };
 
-// Función de lectura tolerante a prefijos (detecta 'META FEBRERO', 'META MARZO', etc.)
+// Función de lectura tolerante a prefijos
 function getRowValue(row, keyName) {
   if (!row) return '';
   const targetKey = keyName.trim().toUpperCase();
@@ -68,7 +68,7 @@ async function preloadAllMonths() {
 
           const validData = (results.data || []).map(row => ({
             ...row,
-            _MES_ORIGEN: month // Asigna el mes de origen a la fila
+            _MES_ORIGEN: month
           })).filter(row => {
             const agentVal = getRowValue(row, 'PROMOTOR');
             return agentVal && agentVal !== '';
@@ -111,7 +111,6 @@ function loadDashboardData() {
     const activeMonths = agentMonthsMap[agentName] || [];
     const currentRowMonth = row._MES_ORIGEN;
 
-    // Formatea los meses colocando en negrilla el mes correspondiente a la fila actual
     const formattedMonths = activeMonths
       .map(m => {
         const nameFormatted = m.charAt(0).toUpperCase() + m.slice(1);
@@ -128,15 +127,13 @@ function loadDashboardData() {
     };
   });
 
-  filteredData = [...rawData];
-
   resetSelect('filter-trainer');
   resetSelect('filter-supervisor');
   resetSelect('filter-coordinador');
   resetSelect('filter-status');
 
   populateFilters(rawData);
-  renderAllTables();
+  filterData(); // Aplica búsqueda y filtros actuales
 }
 
 function renderAllTables() {
@@ -148,10 +145,14 @@ function renderAllTables() {
 
   renderLeadersTables(filteredData);
   
-  // Si la pestaña actual es la de tendencias, actualiza sus datos al filtrar
   const tabTrends = document.getElementById('tab-trends');
   if (tabTrends && tabTrends.style.display !== 'none') {
     renderTrendsTable();
+  }
+
+  const tabSessions = document.getElementById('tab-sessions');
+  if (tabSessions && tabSessions.style.display !== 'none') {
+    renderTrainerSessions(filteredData);
   }
 }
 
@@ -211,24 +212,30 @@ function fillSelect(elementId, options) {
 }
 
 function filterData() {
+  const searchVal = document.getElementById('filter-search')?.value.toLowerCase().trim() || '';
   const trainerVal = document.getElementById('filter-trainer').value;
   const supervisorVal = document.getElementById('filter-supervisor').value;
   const coordinadorVal = document.getElementById('filter-coordinador').value;
   const statusVal = document.getElementById('filter-status').value;
 
   filteredData = rawData.filter(item => {
+    const agentName = getRowValue(item, 'PROMOTOR').toLowerCase();
+    const matchSearch = !searchVal || agentName.includes(searchVal);
     const matchTrainer = !trainerVal || getRowValue(item, 'TRAINER') === trainerVal;
     const matchSupervisor = !supervisorVal || getRowValue(item, 'SUPERVISOR') === supervisorVal;
     const matchCoordinador = !coordinadorVal || getRowValue(item, 'COORDINADOR') === coordinadorVal;
     const matchStatus = !statusVal || getRowValue(item, 'STATUS AGENTE') === statusVal;
     
-    return matchTrainer && matchSupervisor && matchCoordinador && matchStatus;
+    return matchSearch && matchTrainer && matchSupervisor && matchCoordinador && matchStatus;
   });
 
   renderAllTables();
 }
 
 function resetAllFilters() {
+  const searchInput = document.getElementById('filter-search');
+  if (searchInput) searchInput.value = '';
+  
   document.getElementById('filter-mes').value = 'todos';
   document.getElementById('filter-trainer').value = '';
   document.getElementById('filter-supervisor').value = '';
@@ -251,16 +258,22 @@ function switchTab(tabName, evt) {
   const tabAgents = document.getElementById('tab-agents');
   const tabLeaders = document.getElementById('tab-leaders');
   const tabTrends = document.getElementById('tab-trends');
+  const tabSessions = document.getElementById('tab-sessions');
 
   if (tabAgents) tabAgents.style.display = 'none';
   if (tabLeaders) tabLeaders.style.display = 'none';
   if (tabTrends) tabTrends.style.display = 'none';
+  if (tabSessions) tabSessions.style.display = 'none';
 
   if (tabName === 'agents' && tabAgents) tabAgents.style.display = 'block';
   if (tabName === 'leaders' && tabLeaders) tabLeaders.style.display = 'block';
   if (tabName === 'trends' && tabTrends) {
     tabTrends.style.display = 'block';
     renderTrendsTable();
+  }
+  if (tabName === 'sessions' && tabSessions) {
+    tabSessions.style.display = 'block';
+    renderTrainerSessions(filteredData);
   }
 
   if (evt && evt.currentTarget) {
@@ -333,7 +346,7 @@ function getComplianceBadge(valueStr) {
 }
 
 // ==========================================
-// 6. RENDERIZADO TABLAS
+// 6. RENDERIZADO TABLAS Y TARJETAS
 // ==========================================
 function renderTable(data) {
   const tbody = document.querySelector('#agents-table tbody');
@@ -481,17 +494,20 @@ function renderTrendsTable() {
   monthKeys.forEach(monthKey => {
     const monthData = allMonthsData[monthKey] || [];
     
+    const searchVal = document.getElementById('filter-search')?.value.toLowerCase().trim() || '';
     const trainerVal = document.getElementById('filter-trainer')?.value;
     const supervisorVal = document.getElementById('filter-supervisor')?.value;
     const coordinadorVal = document.getElementById('filter-coordinador')?.value;
     const statusVal = document.getElementById('filter-status')?.value;
 
     const filteredMonthData = monthData.filter(item => {
+      const agentName = getRowValue(item, 'PROMOTOR').toLowerCase();
+      const matchSearch = !searchVal || agentName.includes(searchVal);
       const matchTrainer = !trainerVal || getRowValue(item, 'TRAINER') === trainerVal;
       const matchSupervisor = !supervisorVal || getRowValue(item, 'SUPERVISOR') === supervisorVal;
       const matchCoordinador = !coordinadorVal || getRowValue(item, 'COORDINADOR') === coordinadorVal;
       const matchStatus = !statusVal || getRowValue(item, 'STATUS AGENTE') === statusVal;
-      return matchTrainer && matchSupervisor && matchCoordinador && matchStatus;
+      return matchSearch && matchTrainer && matchSupervisor && matchCoordinador && matchStatus;
     });
 
     let agentsCount = filteredMonthData.length;
@@ -530,11 +546,111 @@ function renderTrendsTable() {
   });
 }
 
+function renderTrainerSessions(data) {
+  const container = document.getElementById('trainer-sessions-container');
+  if (!container) return;
+  container.innerHTML = '';
+
+  if (!data || data.length === 0) {
+    container.innerHTML = '<div class="table-card" style="text-align:center; padding: 20px;">No hay sesiones registradas para los filtros seleccionados.</div>';
+    return;
+  }
+
+  const agentsMap = {};
+
+  data.forEach(row => {
+    const agent = getRowValue(row, 'PROMOTOR') || 'Sin Nombre';
+    if (!agentsMap[agent]) {
+      agentsMap[agent] = {
+        trainer: getRowValue(row, 'TRAINER') || '-',
+        supervisor: getRowValue(row, 'SUPERVISOR') || '-',
+        coordinador: getRowValue(row, 'COORDINADOR') || '-',
+        status: getRowValue(row, 'STATUS AGENTE') || '-',
+        mesOrigen: row._MES_ORIGEN || '',
+        sessions: []
+      };
+    }
+
+    Object.keys(row).forEach(key => {
+      const upperKey = key.toUpperCase();
+      if (upperKey.includes('SESIÓ') || upperKey.includes('SESION')) {
+        const fecha = getRowValue(row, key);
+        if (fecha && fecha !== '-') {
+          const matchNum = upperKey.match(/\d+/);
+          const numSesion = matchNum ? matchNum[0] : '';
+          
+          agentsMap[agent].sessions.push({
+            num: numSesion ? `Sesión ${numSesion}` : key,
+            fecha: fecha,
+            urlTr: getRowValue(row, `URLTR SESION ${numSesion}`) || getRowValue(row, `URLTR SESIÓ ${numSesion}`) || getRowValue(row, `URL TR ${numSesion}`) || '-',
+            producto: getRowValue(row, `PRODUCTO SESION ${numSesion}`) || getRowValue(row, `PRODUCTO SESIÓ ${numSesion}`) || '-',
+            objeciones: getRowValue(row, `OBJECIONES SESION ${numSesion}`) || getRowValue(row, `OBJECIONES SESIÓ ${numSesion}`) || '-',
+            cierre: getRowValue(row, `CIERRE SESION ${numSesion}`) || getRowValue(row, `CIERRE SESIÓ ${numSesion}`) || '-',
+            acuerdos: getRowValue(row, `ACUERDOS SESION ${numSesion}`) || getRowValue(row, `ACUERDOS SESIÓ ${numSesion}`) || getRowValue(row, `ACUERDOS + ESTADO ${numSesion}`) || '-'
+          });
+        }
+      }
+    });
+  });
+
+  Object.keys(agentsMap).forEach(agentName => {
+    const info = agentsMap[agentName];
+    const card = document.createElement('div');
+    card.className = 'table-card agent-session-card';
+    card.style.marginBottom = '20px';
+
+    let sessionsHTML = '';
+    if (info.sessions.length === 0) {
+      sessionsHTML = '<p style="color: #777; font-style: italic;">Sin sesiones registradas este mes.</p>';
+    } else {
+      sessionsHTML = info.sessions.map(s => `
+        <div class="session-block" style="border: 1px solid #e0e0e0; border-radius: 6px; padding: 12px; margin-top: 10px; background-color: #f9f9f9;">
+          <div style="font-weight: bold; color: #2c3e50; margin-bottom: 8px; border-bottom: 1px solid #ddd; padding-bottom: 4px;">
+            ${s.num} — Fecha: <span style="font-weight: normal;">${s.fecha}</span>
+          </div>
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 8px; font-size: 0.9em;">
+            <div><strong>URLTr:</strong> ${s.urlTr !== '-' ? `<a href="${s.urlTr}" target="_blank">Ver Enlace</a>` : '-'}</div>
+            <div><strong>Producto:</strong> ${s.producto}</div>
+            <div><strong>Objeciones:</strong> ${s.objeciones}</div>
+            <div><strong>Cierre:</strong> ${s.cierre}</div>
+            <div style="grid-column: 1 / -1;"><strong>Acuerdos + Estado:</strong> ${s.acuerdos}</div>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    card.innerHTML = `
+      <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #3498db; padding-bottom: 8px; margin-bottom: 12px;">
+        <h3 style="margin: 0; color: #2c3e50;">${agentName}</h3>
+        <span style="font-size: 0.85em; background: #e8f4fc; color: #2980b9; padding: 4px 8px; border-radius: 4px; font-weight: bold;">
+          Status: ${info.status}
+        </span>
+      </div>
+      <div style="font-size: 0.88em; color: #555; margin-bottom: 10px; display: flex; gap: 15px; flex-wrap: wrap;">
+        <span><strong>Trainer:</strong> ${info.trainer}</span>
+        <span><strong>Supervisor:</strong> ${info.supervisor}</span>
+        <span><strong>Coordinador:</strong> ${info.coordinador}</span>
+      </div>
+      <div class="sessions-list">
+        ${sessionsHTML}
+      </div>
+    `;
+
+    container.appendChild(card);
+  });
+}
+
 // ==========================================
 // 7. INICIALIZACIÓN
 // ==========================================
 document.addEventListener('DOMContentLoaded', () => {
   populateMonthSelector();
+  
+  const searchInput = document.getElementById('filter-search');
+  if (searchInput) {
+    searchInput.addEventListener('input', filterData);
+  }
+
   document.getElementById('filter-mes').addEventListener('change', loadDashboardData);
   document.getElementById('btn-reset').addEventListener('click', resetAllFilters);
   preloadAllMonths();

@@ -167,3 +167,34 @@ th:hover {
   background-color: #cbd5e1;
 }
 
+.sessions-cards-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.agent-session-card {
+  background: #ffffff;
+  border-radius: 8px;
+  padding: 18px;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+}
+
+.session-block a {
+  color: #3498db;
+  text-decoration: underline;
+}
+
+.filters-grid input[type="text"] {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  outline: none;
+  font-size: 0.9rem;
+}
+
+.filters-grid input[type="text"]:focus {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.2);
+}

@@ -26,12 +26,17 @@
       <button class="tab-button active" onclick="switchTab('agents', event)">Rendimiento por Agente</button>
       <button class="tab-button" onclick="switchTab('leaders', event)">Acumulativo por Líder</button>
       <button class="tab-button" onclick="switchTab('trends', event)">Tendencias Semanales</button>
+      <button class="tab-button" onclick="switchTab('sessions', event)">Sesiones Trainer</button>
     </div>
 
     <!-- 2. BARRA DE FILTROS -->
     <section class="filters-card">
       <h2>Filtros</h2>
-      <div class="filters-grid">
+<div class="filters-grid">
+        <div>
+          <label for="filter-search">Buscar Agente:</label>
+          <input type="text" id="filter-search" placeholder="Escribe un nombre..." autocomplete="off">
+        </div>
         <div>
           <label for="filter-mes">Seleccionar Mes:</label>
           <select id="filter-mes">
@@ -165,6 +170,14 @@
         </div>
       </div>
     </section>
+
+    <!-- TAB 4: Sesiones Trainer (Tarjetas por Agente) -->
+    <section id="tab-sessions" class="tab-content" style="display: none;">
+      <div id="trainer-sessions-container" class="sessions-cards-grid">
+        <!-- Se genera dinámicamente mediante JS -->
+      </div>
+    </section>
+
   </main>
 
   <!-- Script con la lógica del dashboard -->
