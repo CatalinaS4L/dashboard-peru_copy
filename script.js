@@ -17,6 +17,7 @@ let filteredData = [];
 
 let sortState = {
   'agents-table': { column: null, isAsc: true },
+  'focus-table': { column: null, isAsc: true },
   'supervisors-table': { column: null, isAsc: true },
   'coordinators-table': { column: null, isAsc: true }
 };
@@ -169,9 +170,15 @@ function loadDashboardData() {
 
 function renderAllTables() {
   if (sortState['agents-table'].column) {
-    applyAgentSort();
+    applyAgentSort('agents-table');
   } else {
     renderTable(filteredData);
+  }
+
+  if (sortState['focus-table'].column) {
+    applyAgentSort('focus-table');
+  } else {
+    renderFocusTable(filteredData);
   }
 
   renderLeadersTables(filteredData);
@@ -287,16 +294,19 @@ function switchTab(tabName, evt) {
   document.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
   
   const tabAgents = document.getElementById('tab-agents');
+  const tabFocus = document.getElementById('tab-focus');
   const tabLeaders = document.getElementById('tab-leaders');
   const tabTrends = document.getElementById('tab-trends');
   const tabSessions = document.getElementById('tab-sessions');
 
   if (tabAgents) tabAgents.style.display = 'none';
+  if (tabFocus) tabFocus.style.display = 'none';
   if (tabLeaders) tabLeaders.style.display = 'none';
   if (tabTrends) tabTrends.style.display = 'none';
   if (tabSessions) tabSessions.style.display = 'none';
 
   if (tabName === 'agents' && tabAgents) tabAgents.style.display = 'block';
+  if (tabName === 'focus' && tabFocus) tabFocus.style.display = 'block';
   if (tabName === 'leaders' && tabLeaders) tabLeaders.style.display = 'block';
   if (tabName === 'trends' && tabTrends) {
     tabTrends.style.display = 'block';
@@ -326,8 +336,8 @@ function handleSort(tableId, columnKey) {
     current.isAsc = true;
   }
 
-  if (tableId === 'agents-table') {
-    applyAgentSort();
+  if (tableId === 'agents-table' || tableId === 'focus-table') {
+    applyAgentSort(tableId);
   } else if (tableId === 'supervisors-table') {
     renderGroupedTable(filteredData, 'SUPERVISOR', '#supervisors-table tbody', 'supervisors-table');
   } else if (tableId === 'coordinators-table') {
@@ -335,8 +345,8 @@ function handleSort(tableId, columnKey) {
   }
 }
 
-function applyAgentSort() {
-  const { column, isAsc } = sortState['agents-table'];
+function applyAgentSort(tableId) {
+  const { column, isAsc } = sortState[tableId];
 
   filteredData.sort((a, b) => {
     let valA = getRowValue(a, column);
@@ -357,7 +367,11 @@ function applyAgentSort() {
     return 0;
   });
 
-  renderTable(filteredData);
+  if (tableId === 'agents-table') {
+    renderTable(filteredData);
+  } else if (tableId === 'focus-table') {
+    renderFocusTable(filteredData);
+  }
 }
 
 function getComplianceBadge(valueStr) {
@@ -409,6 +423,37 @@ function renderTable(data) {
       <td>${getRowValue(row, 'CIERRE') || '0'}</td>
       <td>${complianceHTML}</td>
       <td>${getRowValue(row, 'STATUS AGENTE') || '-'}</td>
+      <td>${row['MESES_ACTIVO'] || '-'}</td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+function renderFocusTable(data) {
+  const tbody = document.querySelector('#focus-table tbody');
+  if (!tbody) return;
+  tbody.innerHTML = '';
+
+  if (!data || data.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;">No hay datos disponibles.</td></tr>';
+    return;
+  }
+
+  data.forEach(row => {
+    const metaVal = getRowValue(row, 'META');
+    const complianceVal = getRowValue(row, 'CUMPLIMIENTO MES');
+    const complianceHTML = getComplianceBadge(complianceVal);
+
+    const notaFinalVal = getRowValue(row, 'NOTA FINAL');
+    const notaFinalHTML = getComplianceBadge(notaFinalVal);
+
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td><strong>${getRowValue(row, 'PROMOTOR') || '-'}</strong></td>
+      <td>${metaVal || '0'}</td>
+      <td>${getRowValue(row, 'CIERRE') || '0'}</td>
+      <td>${complianceHTML}</td>
+      <td>${notaFinalHTML}</td>
       <td>${row['MESES_ACTIVO'] || '-'}</td>
     `;
     tbody.appendChild(tr);

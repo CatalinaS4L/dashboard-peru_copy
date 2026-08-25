@@ -24,6 +24,7 @@
     <!-- 1. PESTAÑAS NAVEGACIÓN -->
     <div class="tabs-container">
       <button class="tab-button active" onclick="switchTab('agents', event)">Rendimiento por Agente</button>
+      <button class="tab-button" onclick="switchTab('focus', event)">Foco Rendimiento por Agente</button>
       <button class="tab-button" onclick="switchTab('leaders', event)">Acumulativo por Líder</button>
       <button class="tab-button" onclick="switchTab('trends', event)">Tendencias Semanales</button>
       <button class="tab-button" onclick="switchTab('sessions', event)">Sesiones Trainer</button>
@@ -32,7 +33,7 @@
     <!-- 2. BARRA DE FILTROS -->
     <section class="filters-card">
       <h2>Filtros</h2>
-<div class="filters-grid">
+      <div class="filters-grid">
         <div>
           <label for="filter-search">Buscar Agente:</label>
           <input type="text" id="filter-search" placeholder="Escribe un nombre..." autocomplete="off">
@@ -66,7 +67,7 @@
       </div>
     </section>
 
-    <!-- 3. TAB 1: Tabla de Agentes -->
+    <!-- 3. TAB 1: Tabla de Agentes Completa -->
     <section id="tab-agents" class="table-card tab-content active">
       <h2>Listado de Agentes</h2>
       <div class="table-wrapper">
@@ -87,6 +88,26 @@
               <th onclick="handleSort('agents-table', 'CUMPLIMIENTO MES')">Cumpl. %</th>
               <th onclick="handleSort('agents-table', 'STATUS AGENTE')">Status</th>
               <th onclick="handleSort('agents-table', 'MESES_ACTIVO')">Mes(es) Activo</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- TAB FOCO: Foco Rendimiento por Agente -->
+    <section id="tab-focus" class="table-card tab-content" style="display: none;">
+      <h2>Foco Rendimiento por Agente</h2>
+      <div class="table-wrapper">
+        <table id="focus-table">
+          <thead>
+            <tr>
+              <th onclick="handleSort('focus-table', 'PROMOTOR')">Agente</th>
+              <th onclick="handleSort('focus-table', 'META')">Meta</th>
+              <th onclick="handleSort('focus-table', 'CIERRE')">Cierre</th>
+              <th onclick="handleSort('focus-table', 'CUMPLIMIENTO MES')">Cumpl. %</th>
+              <th onclick="handleSort('focus-table', 'NOTA FINAL')">Nota Final</th>
+              <th onclick="handleSort('focus-table', 'MESES_ACTIVO')">Mes(es) Activo</th>
             </tr>
           </thead>
           <tbody></tbody>
