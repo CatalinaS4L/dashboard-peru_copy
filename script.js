@@ -26,7 +26,6 @@ function getRowValue(row, keyName) {
   const actualKey = Object.keys(row).find(k => {
     if (!k) return false;
     const cleanKey = k.replace(/[\r\n]/g, '').trim().toUpperCase();
-    // Coincidencia exacta O si la columna empieza con la palabra clave (ej: META FEBRERO empieza con META)
     return cleanKey === targetKey || cleanKey.startsWith(targetKey);
   });
   
@@ -64,7 +63,10 @@ async function preloadAllMonths() {
         complete: results => {
           console.log(`[OK] Descargado ${month}:`, results.data);
 
-          const validData = (results.data || []).filter(row => {
+          const validData = (results.data || []).map(row => ({
+            ...row,
+            _MES_ORIGEN: month // Asigna el mes de origen a la fila
+          })).filter(row => {
             const agentVal = getRowValue(row, 'PROMOTOR');
             return agentVal && agentVal !== '';
           });
@@ -104,8 +106,17 @@ function loadDashboardData() {
   rawData = rawData.map(row => {
     const agentName = getRowValue(row, 'PROMOTOR').toUpperCase();
     const activeMonths = agentMonthsMap[agentName] || [];
+    const currentRowMonth = row._MES_ORIGEN;
+
+    // Formatea los meses colocando en negrilla (<strong>) el mes correspondiente a la fila actual
     const formattedMonths = activeMonths
-      .map(m => m.charAt(0).toUpperCase() + m.slice(1))
+      .map(m => {
+        const nameFormatted = m.charAt(0).toUpperCase() + m.slice(1);
+        if (m === currentRowMonth) {
+          return `<strong>${nameFormatted}</strong>`;
+        }
+        return nameFormatted;
+      })
       .join(', ');
 
     return {
