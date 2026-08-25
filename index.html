@@ -31,33 +31,33 @@
 
     <!-- 2. BARRA DE FILTROS -->
     <section class="filters-card">
-      <h2>Filtros <small style="font-size: 0.75em; font-weight: normal; color: #666;">(Mantén presionado Ctrl / Cmd para seleccionar varios)</small></h2>
-      <div class="filters-grid">
+      <h2>Filtros</h2>
+<div class="filters-grid">
         <div>
           <label for="filter-search">Buscar Agente:</label>
           <input type="text" id="filter-search" placeholder="Escribe un nombre..." autocomplete="off">
         </div>
         <div>
-          <label for="filter-mes">Seleccionar Mes(es):</label>
-          <select id="filter-mes" multiple size="4">
-            <!-- Las opciones se generan dinámicamente -->
+          <label for="filter-mes">Seleccionar Mes:</label>
+          <select id="filter-mes">
+            <option value="todos">Todos los meses</option>
           </select>
         </div>
         <div>
           <label for="filter-trainer">Trainer:</label>
-          <select id="filter-trainer" multiple size="4"></select>
+          <select id="filter-trainer"><option value="">Todos</option></select>
         </div>
         <div>
           <label for="filter-supervisor">Supervisor:</label>
-          <select id="filter-supervisor" multiple size="4"></select>
+          <select id="filter-supervisor"><option value="">Todos</option></select>
         </div>
         <div>
           <label for="filter-coordinador">Coordinador:</label>
-          <select id="filter-coordinador" multiple size="4"></select>
+          <select id="filter-coordinador"><option value="">Todos</option></select>
         </div>
         <div>
           <label for="filter-status">Status Agente:</label>
-          <select id="filter-status" multiple size="4"></select>
+          <select id="filter-status"><option value="">Todos</option></select>
         </div>
         <div class="filter-actions">
           <label>&nbsp;</label>
