@@ -21,6 +21,19 @@ let sortState = {
   'coordinators-table': { column: null, isAsc: true }
 };
 
+// Función auxiliar para extraer valores seleccionados de un <select multiple>
+function getSelectValues(selectElement) {
+  if (!selectElement) return [];
+  const result = [];
+  const options = selectElement.options;
+  for (let i = 0; i < options.length; i++) {
+    if (options[i].selected && options[i].value !== '' && options[i].value !== 'todos') {
+      result.push(options[i].value);
+    }
+  }
+  return result;
+}
+
 // Función de lectura tolerante a prefijos
 function getRowValue(row, keyName) {
   if (!row) return '';
@@ -72,16 +85,20 @@ function parseSessionField(fullText, exactLabel) {
 function populateMonthSelector() {
   const selectMes = document.getElementById('filter-mes');
   if (!selectMes) return;
+  selectMes.innerHTML = '';
 
   Object.keys(MONTH_URLS).forEach(monthKey => {
-    if (!selectMes.querySelector(`option[value="${monthKey}"]`)) {
-      const option = document.createElement('option');
-      option.value = monthKey;
-      const formattedName = monthKey.charAt(0).toUpperCase() + monthKey.slice(1);
-      option.textContent = `${formattedName} 2026`;
-      selectMes.appendChild(option);
-    }
+    const option = document.createElement('option');
+    option.value = monthKey;
+    const formattedName = monthKey.charAt(0).toUpperCase() + monthKey.slice(1);
+    option.textContent = `${formattedName} 2026`;
+    selectMes.appendChild(option);
   });
+
+  if (!selectMes.dataset.hasListener) {
+    selectMes.addEventListener('change', loadDashboardData);
+    selectMes.dataset.hasListener = "true";
+  }
 }
 
 async function preloadAllMonths() {
@@ -125,16 +142,23 @@ async function preloadAllMonths() {
 }
 
 function loadDashboardData() {
-  const selectedMonth = document.getElementById('filter-mes').value;
+  const selectedMonths = getSelectValues(document.getElementById('filter-mes'));
   const agentMonthsMap = buildAgentMonthsMap();
 
-  if (selectedMonth === 'todos') {
+  // Si no hay meses seleccionados, se cargan todos por defecto
+  if (selectedMonths.length === 0) {
     rawData = [];
     Object.keys(allMonthsData).forEach(m => {
       rawData = rawData.concat(allMonthsData[m]);
     });
   } else {
-    rawData = allMonthsData[selectedMonth] || [];
+    // Concatenar únicamente los meses seleccionados
+    rawData = [];
+    selectedMonths.forEach(m => {
+      if (allMonthsData[m]) {
+        rawData = rawData.concat(allMonthsData[m]);
+      }
+    });
   }
 
   rawData = rawData.map(row => {
@@ -157,11 +181,6 @@ function loadDashboardData() {
       'MESES_ACTIVO': formattedMonths || '-'
     };
   });
-
-  resetSelect('filter-trainer');
-  resetSelect('filter-supervisor');
-  resetSelect('filter-coordinador');
-  resetSelect('filter-status');
 
   populateFilters(rawData);
   filterData();
@@ -203,13 +222,6 @@ function buildAgentMonthsMap() {
   return map;
 }
 
-function resetSelect(elementId) {
-  const select = document.getElementById(elementId);
-  if (select) {
-    select.innerHTML = '<option value="">Todos</option>';
-  }
-}
-
 // ==========================================
 // 3. FILTROS Y EVENTOS
 // ==========================================
@@ -229,10 +241,16 @@ function fillSelect(elementId, options) {
   const select = document.getElementById(elementId);
   if (!select) return;
 
+  const currentSelected = getSelectValues(select);
+  select.innerHTML = '';
+
   options.sort().forEach(opt => {
     const option = document.createElement('option');
     option.value = opt;
     option.textContent = opt;
+    if (currentSelected.includes(opt)) {
+      option.selected = true;
+    }
     select.appendChild(option);
   });
 
@@ -244,18 +262,20 @@ function fillSelect(elementId, options) {
 
 function filterData() {
   const searchVal = document.getElementById('filter-search')?.value.toLowerCase().trim() || '';
-  const trainerVal = document.getElementById('filter-trainer').value;
-  const supervisorVal = document.getElementById('filter-supervisor').value;
-  const coordinadorVal = document.getElementById('filter-coordinador').value;
-  const statusVal = document.getElementById('filter-status').value;
+  
+  const selectedTrainers = getSelectValues(document.getElementById('filter-trainer'));
+  const selectedSupervisors = getSelectValues(document.getElementById('filter-supervisor'));
+  const selectedCoordinadores = getSelectValues(document.getElementById('filter-coordinador'));
+  const selectedStatuses = getSelectValues(document.getElementById('filter-status'));
 
   filteredData = rawData.filter(item => {
     const agentName = getRowValue(item, 'PROMOTOR').toLowerCase();
     const matchSearch = !searchVal || agentName.includes(searchVal);
-    const matchTrainer = !trainerVal || getRowValue(item, 'TRAINER') === trainerVal;
-    const matchSupervisor = !supervisorVal || getRowValue(item, 'SUPERVISOR') === supervisorVal;
-    const matchCoordinador = !coordinadorVal || getRowValue(item, 'COORDINADOR') === coordinadorVal;
-    const matchStatus = !statusVal || getRowValue(item, 'STATUS AGENTE') === statusVal;
+    
+    const matchTrainer = selectedTrainers.length === 0 || selectedTrainers.includes(getRowValue(item, 'TRAINER'));
+    const matchSupervisor = selectedSupervisors.length === 0 || selectedSupervisors.includes(getRowValue(item, 'SUPERVISOR'));
+    const matchCoordinador = selectedCoordinadores.length === 0 || selectedCoordinadores.includes(getRowValue(item, 'COORDINADOR'));
+    const matchStatus = selectedStatuses.length === 0 || selectedStatuses.includes(getRowValue(item, 'STATUS AGENTE'));
     
     return matchSearch && matchTrainer && matchSupervisor && matchCoordinador && matchStatus;
   });
@@ -267,11 +287,14 @@ function resetAllFilters() {
   const searchInput = document.getElementById('filter-search');
   if (searchInput) searchInput.value = '';
 
-  document.getElementById('filter-mes').value = 'todos';
-  document.getElementById('filter-trainer').value = '';
-  document.getElementById('filter-supervisor').value = '';
-  document.getElementById('filter-coordinador').value = '';
-  document.getElementById('filter-status').value = '';
+  ['filter-mes', 'filter-trainer', 'filter-supervisor', 'filter-coordinador', 'filter-status'].forEach(id => {
+    const sel = document.getElementById(id);
+    if (sel) {
+      for (let i = 0; i < sel.options.length; i++) {
+        sel.options[i].selected = false;
+      }
+    }
+  });
 
   Object.keys(sortState).forEach(tableId => {
     sortState[tableId] = { column: null, isAsc: true };
@@ -526,18 +549,18 @@ function renderTrendsTable() {
     const monthData = allMonthsData[monthKey] || [];
     
     const searchVal = document.getElementById('filter-search')?.value.toLowerCase().trim() || '';
-    const trainerVal = document.getElementById('filter-trainer')?.value;
-    const supervisorVal = document.getElementById('filter-supervisor')?.value;
-    const coordinadorVal = document.getElementById('filter-coordinador')?.value;
-    const statusVal = document.getElementById('filter-status')?.value;
+    const selectedTrainers = getSelectValues(document.getElementById('filter-trainer'));
+    const selectedSupervisors = getSelectValues(document.getElementById('filter-supervisor'));
+    const selectedCoordinadores = getSelectValues(document.getElementById('filter-coordinador'));
+    const selectedStatuses = getSelectValues(document.getElementById('filter-status'));
 
     const filteredMonthData = monthData.filter(item => {
       const agentName = getRowValue(item, 'PROMOTOR').toLowerCase();
       const matchSearch = !searchVal || agentName.includes(searchVal);
-      const matchTrainer = !trainerVal || getRowValue(item, 'TRAINER') === trainerVal;
-      const matchSupervisor = !supervisorVal || getRowValue(item, 'SUPERVISOR') === supervisorVal;
-      const matchCoordinador = !coordinadorVal || getRowValue(item, 'COORDINADOR') === coordinadorVal;
-      const matchStatus = !statusVal || getRowValue(item, 'STATUS AGENTE') === statusVal;
+      const matchTrainer = selectedTrainers.length === 0 || selectedTrainers.includes(getRowValue(item, 'TRAINER'));
+      const matchSupervisor = selectedSupervisors.length === 0 || selectedSupervisors.includes(getRowValue(item, 'SUPERVISOR'));
+      const matchCoordinador = selectedCoordinadores.length === 0 || selectedCoordinadores.includes(getRowValue(item, 'COORDINADOR'));
+      const matchStatus = selectedStatuses.length === 0 || selectedStatuses.includes(getRowValue(item, 'STATUS AGENTE'));
       return matchSearch && matchTrainer && matchSupervisor && matchCoordinador && matchStatus;
     });
 
@@ -594,7 +617,6 @@ function renderTrainerSessions(data) {
     const mesOrigen = row._MES_ORIGEN || 'desconocido';
     const mesFormatted = mesOrigen.charAt(0).toUpperCase() + mesOrigen.slice(1);
     
-    // Clave única combinando Promotor + Mes para independizar recuadros
     const uniqueKey = `${agent}_${mesOrigen}`;
 
     if (!agentMonthMap[uniqueKey]) {
@@ -609,7 +631,6 @@ function renderTrainerSessions(data) {
       };
     }
 
-    // Escanear dinámicamente las columnas de sesiones
     Object.keys(row).forEach(key => {
       const upperKey = key.toUpperCase();
       if (upperKey.includes('SESIÓ') || upperKey.includes('SESION')) {
@@ -619,7 +640,6 @@ function renderTrainerSessions(data) {
           const matchNum = upperKey.match(/\d+/);
           const numSesion = matchNum ? matchNum[0] : '';
 
-          // Extracción con Emojis y Case-Sensitivity
           let fecha = parseSessionField(rawCellContent, '📅 Fecha');
           let urlTr = parseSessionField(rawCellContent, '🔗 URLTr:');
           let speech = parseSessionField(rawCellContent, '🗣️ Speech:');
@@ -653,7 +673,6 @@ function renderTrainerSessions(data) {
     });
   });
 
-  // Renderizar una tarjeta individual por cada [Promotor + Mes]
   Object.keys(agentMonthMap).forEach(key => {
     const info = agentMonthMap[key];
     const card = document.createElement('div');
@@ -718,7 +737,6 @@ document.addEventListener('DOMContentLoaded', () => {
     searchInput.addEventListener('input', filterData);
   }
 
-  document.getElementById('filter-mes').addEventListener('change', loadDashboardData);
   document.getElementById('btn-reset').addEventListener('click', resetAllFilters);
   preloadAllMonths();
 });
