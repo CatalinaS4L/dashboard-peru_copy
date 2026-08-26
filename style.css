@@ -215,3 +215,13 @@ th:hover {
   border: 1px solid #fff;
 }
 
+.table-header-flex {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+.table-header-flex h2 {
+  margin-bottom: 0;
+}
+

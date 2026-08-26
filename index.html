@@ -60,10 +60,8 @@
           <label for="filter-status">Status Agente:</label>
           <select id="filter-status"><option value="">Todos</option></select>
         </div>
-        <div class="filter-actions" style="display: flex; gap: 10px; align-items: flex-end;">
-          <button id="btn-critical-risk" type="button" class="btn-risk" onclick="toggleCriticalRiskFilter()">
-            ⚠️ Agentes en Riesgo Crítico
-          </button>
+        <div class="filter-actions">
+          <label>&nbsp;</label>
           <button id="btn-reset" type="button">Limpiar Filtros</button>
         </div>
       </div>
@@ -99,7 +97,12 @@
 
     <!-- TAB FOCO: Foco Rendimiento por Agente (Matriz por Meses) -->
     <section id="tab-focus" class="table-card tab-content" style="display: none;">
-      <h2>Foco Rendimiento por Agente</h2>
+      <div class="table-header-flex">
+        <h2>Foco Rendimiento por Agente</h2>
+        <button id="btn-critical-risk" type="button" class="btn-risk" onclick="toggleCriticalRiskFilter()">
+          ⚠️ Agentes en Riesgo Crítico
+        </button>
+      </div>
       <div class="table-wrapper">
         <table id="focus-table">
           <thead></thead>

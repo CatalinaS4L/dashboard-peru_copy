@@ -323,6 +323,10 @@ function hasThreeConsecutiveLowMonths(agentMonthsData) {
 // 4. CAMBIO DE PESTAÑAS
 // ==========================================
 function switchTab(tabName, evt) {
+// Desactivar filtro de riesgo crítico si sale de la pestaña foco
+  if (tabName !== 'focus' && onlyCriticalRisk) {
+    toggleCriticalRiskFilter();
+  }
   document.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
   
   const tabAgents = document.getElementById('tab-agents');
