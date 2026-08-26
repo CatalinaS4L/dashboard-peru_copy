@@ -14,7 +14,8 @@ const MONTH_URLS = {
 let allMonthsData = {};
 let rawData = [];
 let filteredData = [];
-let focusCharts = []; // Almacena instancias de Chart.js en la tabla Foco
+let focusCharts = [];
+let onlyCriticalRisk = false; // Estado del filtro de riesgo crítico
 
 let sortState = {
   'agents-table': { column: null, isAsc: true },
@@ -241,6 +242,19 @@ function fillSelect(elementId, options) {
   }
 }
 
+function toggleCriticalRiskFilter() {
+  onlyCriticalRisk = !onlyCriticalRisk;
+  const btn = document.getElementById('btn-critical-risk');
+  if (btn) {
+    if (onlyCriticalRisk) {
+      btn.classList.add('active');
+    } else {
+      btn.classList.remove('active');
+    }
+  }
+  renderAllTables();
+}
+
 function filterData() {
   const searchVal = document.getElementById('filter-search')?.value.toLowerCase().trim() || '';
   const trainerVal = document.getElementById('filter-trainer').value;
@@ -272,11 +286,37 @@ function resetAllFilters() {
   document.getElementById('filter-coordinador').value = '';
   document.getElementById('filter-status').value = '';
 
+  onlyCriticalRisk = false;
+  const btnRisk = document.getElementById('btn-critical-risk');
+  if (btnRisk) btnRisk.classList.remove('active');
+
   Object.keys(sortState).forEach(tableId => {
     sortState[tableId] = { column: null, isAsc: true };
   });
 
   loadDashboardData();
+}
+
+// Evaluador de 3 meses consecutivos < 50%
+function hasThreeConsecutiveLowMonths(agentMonthsData) {
+  const monthKeys = Object.keys(MONTH_URLS); // Orden cronológico de meses
+  let consecutiveLowCount = 0;
+
+  for (let m of monthKeys) {
+    const record = agentMonthsData[m];
+    if (record && record.cumplimiento !== '-') {
+      const pct = parseNum(record.cumplimiento);
+      if (pct < 50) {
+        consecutiveLowCount++;
+        if (consecutiveLowCount >= 3) return true;
+      } else {
+        consecutiveLowCount = 0; // Se reinicia si recupera el rendimiento
+      }
+    } else {
+      consecutiveLowCount = 0; // Se reinicia si el mes no está activo
+    }
+  }
+  return false;
 }
 
 // ==========================================
@@ -427,7 +467,7 @@ function renderTable(data) {
   });
 }
 
-// TABLA FOCO: Matriz por Agente con Cierre, Cumpl. % por Mes y Gráficos
+// TABLA FOCO: Matriz por Agente con Cierre, Cumpl. % por Mes, Gráficos y Filtro de Riesgo Crítico
 function renderFocusTable(data) {
   const table = document.getElementById('focus-table');
   if (!table) return;
@@ -437,7 +477,6 @@ function renderFocusTable(data) {
   thead.innerHTML = '';
   tbody.innerHTML = '';
 
-  // Limpiar gráficos anteriores para optimizar el rendimiento
   focusCharts.forEach(chart => chart.destroy());
   focusCharts = [];
 
@@ -449,7 +488,6 @@ function renderFocusTable(data) {
   const selectedMonth = document.getElementById('filter-mes').value;
   let monthsToDisplay = selectedMonth === 'todos' ? Object.keys(MONTH_URLS) : [selectedMonth];
 
-  // Generar Encabezados de Tabla Dinámicamente
   let headerHTML = '<tr><th onclick="handleSort(\'focus-table\', \'PROMOTOR\')">Agente</th>';
   monthsToDisplay.forEach(m => {
     const mesFormatted = m.charAt(0).toUpperCase() + m.slice(1);
@@ -459,30 +497,45 @@ function renderFocusTable(data) {
   headerHTML += '<th style="text-align:center; min-width: 180px;">Gráfico de Performance</th></tr>';
   thead.innerHTML = headerHTML;
 
-  // Agrupar por Promotor
-  const agentsMap = {};
+  // 1. Mapear todo el historial por promotor (usando todos los meses disponibles)
+  const fullAgentsMap = {};
+  Object.keys(allMonthsData).forEach(m => {
+    allMonthsData[m].forEach(row => {
+      const agentName = getRowValue(row, 'PROMOTOR');
+      if (!agentName) return;
 
+      if (!fullAgentsMap[agentName]) {
+        fullAgentsMap[agentName] = { agentName: agentName, monthsData: {} };
+      }
+      fullAgentsMap[agentName].monthsData[m] = {
+        cierre: parseNum(getRowValue(row, 'CIERRE')),
+        cumplimiento: getRowValue(row, 'CUMPLIMIENTO MES') || '-'
+      };
+    });
+  });
+
+  // 2. Agrupar datos según la selección actual
+  const agentsMap = {};
   data.forEach(row => {
     const agentName = getRowValue(row, 'PROMOTOR');
     if (!agentName) return;
 
     if (!agentsMap[agentName]) {
-      agentsMap[agentName] = {
-        agentName: agentName,
-        monthsData: {}
-      };
-    }
-
-    const mesOrigen = row._MES_ORIGEN;
-    if (mesOrigen) {
-      agentsMap[agentName].monthsData[mesOrigen] = {
-        cierre: parseNum(getRowValue(row, 'CIERRE')),
-        cumplimiento: getRowValue(row, 'CUMPLIMIENTO MES') || '-'
-      };
+      agentsMap[agentName] = fullAgentsMap[agentName] || { agentName: agentName, monthsData: {} };
     }
   });
 
   let agentsList = Object.values(agentsMap);
+
+  // 3. Aplicar Filtro Rápido de Riesgo Crítico si está activo
+  if (onlyCriticalRisk) {
+    agentsList = agentsList.filter(agent => hasThreeConsecutiveLowMonths(agent.monthsData));
+  }
+
+  if (agentsList.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="15" style="text-align:center;">No hay agentes en Riesgo Crítico con los filtros seleccionados.</td></tr>';
+    return;
+  }
 
   const sortInfo = sortState['focus-table'];
   if (sortInfo && sortInfo.column === 'PROMOTOR') {
@@ -495,7 +548,7 @@ function renderFocusTable(data) {
     });
   }
 
-  // Renderizar filas e incrustar Canvas para Chart.js
+  // 4. Renderizado
   agentsList.forEach((agent, index) => {
     const tr = document.createElement('tr');
     let rowHTML = `<td><strong>${agent.agentName}</strong></td>`;
@@ -534,7 +587,6 @@ function renderFocusTable(data) {
     tr.innerHTML = rowHTML;
     tbody.appendChild(tr);
 
-    // Dibujar Gráfico de Barras por Agente
     const ctx = document.getElementById(canvasId)?.getContext('2d');
     if (ctx) {
       const newChart = new Chart(ctx, {
@@ -555,20 +607,12 @@ function renderFocusTable(data) {
           plugins: {
             legend: { display: false },
             tooltip: {
-              callbacks: {
-                label: (context) => ` Cierre: ${context.raw}`
-              }
+              callbacks: { label: (context) => ` Cierre: ${context.raw}` }
             }
           },
           scales: {
-            x: {
-              grid: { display: false },
-              ticks: { font: { size: 9 } }
-            },
-            y: {
-              display: false,
-              beginAtZero: true
-            }
+            x: { grid: { display: false }, ticks: { font: { size: 9 } } },
+            y: { display: false, beginAtZero: true }
           }
         }
       });
