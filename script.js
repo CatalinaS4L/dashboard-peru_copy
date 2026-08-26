@@ -3,12 +3,14 @@
 // ==========================================
 const timestamp = new Date().getTime();
 
+
+// CAMBIADO POR EL NORMALIZADO POR VER COSAS xd
 const MONTH_URLS = {
-  febrero: `https://docs.google.com/spreadsheets/d/e/2PACX-1vRlckyPnPqEGlq9J9wk_1HwxkfHQqt6X4wHxNtPpRg-RRATO3asLAigUxUyin9D1OS0joXIpJkG8-tL/pub?gid=0&single=true&output=csv&_cb=${timestamp}`,
-  marzo: `https://docs.google.com/spreadsheets/d/e/2PACX-1vRlckyPnPqEGlq9J9wk_1HwxkfHQqt6X4wHxNtPpRg-RRATO3asLAigUxUyin9D1OS0joXIpJkG8-tL/pub?gid=397555912&single=true&output=csv&_cb=${timestamp}`,
-  abril: `https://docs.google.com/spreadsheets/d/e/2PACX-1vRlckyPnPqEGlq9J9wk_1HwxkfHQqt6X4wHxNtPpRg-RRATO3asLAigUxUyin9D1OS0joXIpJkG8-tL/pub?gid=1499336465&single=true&output=csv&_cb=${timestamp}`,
-  mayo: `https://docs.google.com/spreadsheets/d/e/2PACX-1vRlckyPnPqEGlq9J9wk_1HwxkfHQqt6X4wHxNtPpRg-RRATO3asLAigUxUyin9D1OS0joXIpJkG8-tL/pub?gid=289433826&single=true&output=csv&_cb=${timestamp}`,
-  junio: `https://docs.google.com/spreadsheets/d/e/2PACX-1vRlckyPnPqEGlq9J9wk_1HwxkfHQqt6X4wHxNtPpRg-RRATO3asLAigUxUyin9D1OS0joXIpJkG8-tL/pub?gid=632786864&single=true&output=csv&_cb=${timestamp}`
+  febrero: `https://docs.google.com/spreadsheets/d/e/2PACX-1vS8XA4ddmXQF3tJcKew8WhY5Tr8LfjX1E2hkHWZG4u7w8ASutVxoF5jyOinttJyNr1yXpKv6ueoxsUZ/pub?gid=0&single=true&output=csv&_cb=${timestamp}`,
+  marzo: `https://docs.google.com/spreadsheets/d/e/2PACX-1vS8XA4ddmXQF3tJcKew8WhY5Tr8LfjX1E2hkHWZG4u7w8ASutVxoF5jyOinttJyNr1yXpKv6ueoxsUZ/pub?gid=397555912&single=true&output=csv&_cb=${timestamp}`,
+  abril: `https://docs.google.com/spreadsheets/d/e/2PACX-1vS8XA4ddmXQF3tJcKew8WhY5Tr8LfjX1E2hkHWZG4u7w8ASutVxoF5jyOinttJyNr1yXpKv6ueoxsUZ/pub?gid=1499336465&single=true&output=csv&_cb=${timestamp}`,
+  mayo: `https://docs.google.com/spreadsheets/d/e/2PACX-1vS8XA4ddmXQF3tJcKew8WhY5Tr8LfjX1E2hkHWZG4u7w8ASutVxoF5jyOinttJyNr1yXpKv6ueoxsUZ/pub?gid=289433826&single=true&output=csv&_cb=${timestamp}`,
+  junio: `https://docs.google.com/spreadsheets/d/e/2PACX-1vS8XA4ddmXQF3tJcKew8WhY5Tr8LfjX1E2hkHWZG4u7w8ASutVxoF5jyOinttJyNr1yXpKv6ueoxsUZ/pub?gid=632786864&single=true&output=csv&_cb=${timestamp}`
 };
 
 let allMonthsData = {};
