@@ -199,8 +199,9 @@ th:hover {
   box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.2);
 }
 
+/* Estilo del botón Riesgo Crítico */
 .btn-risk {
-  background-color: #e74c3c;
+  background-color: #ed6972;
   color: white;
   border: none;
   padding: 8px 12px;
@@ -209,6 +210,8 @@ th:hover {
   font-weight: bold;
   transition: background 0.2s;
 }
+.btn-risk:hover {
+  background-color: #d8525b;
 .btn-risk.active {
   background-color: #900c3f;
   box-shadow: inset 0 0 5px rgba(0,0,0,0.5);
@@ -223,5 +226,25 @@ th:hover {
 }
 .table-header-flex h2 {
   margin-bottom: 0;
+}
+
+/* Estilo del botón 2 Meses en Verde */
+.btn-green {
+  background-color: #10b981;
+  color: white;
+  border: none;
+  padding: 8px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: bold;
+  transition: background 0.2s, box-shadow 0.2s;
+}
+.btn-green:hover {
+  background-color: #059669;
+}
+.btn-green.active {
+  background-color: #046c4e;
+  box-shadow: inset 0 0 5px rgba(0,0,0,0.5);
+  border: 1px solid #fff;
 }
 

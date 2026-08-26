@@ -15,7 +15,10 @@ let allMonthsData = {};
 let rawData = [];
 let filteredData = [];
 let focusCharts = [];
-let onlyCriticalRisk = false; // Estado del filtro de riesgo crítico
+
+// Variables de estado de los filtros rápidos
+let onlyCriticalRisk = false; 
+let onlyConsistentGreen = false;
 
 let sortState = {
   'agents-table': { column: null, isAsc: true },
@@ -242,16 +245,31 @@ function fillSelect(elementId, options) {
   }
 }
 
+// Alternar filtro de Riesgo Crítico (Desactiva Verde)
 function toggleCriticalRiskFilter() {
   onlyCriticalRisk = !onlyCriticalRisk;
-  const btn = document.getElementById('btn-critical-risk');
-  if (btn) {
-    if (onlyCriticalRisk) {
-      btn.classList.add('active');
-    } else {
-      btn.classList.remove('active');
-    }
+  if (onlyCriticalRisk) {
+    onlyConsistentGreen = false;
+    document.getElementById('btn-consistent-green')?.classList.remove('active');
   }
+
+  const btn = document.getElementById('btn-critical-risk');
+  if (btn) btn.classList.toggle('active', onlyCriticalRisk);
+  
+  renderAllTables();
+}
+
+// Alternar filtro de 2 Meses Seguidos en Verde (Desactiva Riesgo Crítico)
+function toggleConsistentGreenFilter() {
+  onlyConsistentGreen = !onlyConsistentGreen;
+  if (onlyConsistentGreen) {
+    onlyCriticalRisk = false;
+    document.getElementById('btn-critical-risk')?.classList.remove('active');
+  }
+
+  const btn = document.getElementById('btn-consistent-green');
+  if (btn) btn.classList.toggle('active', onlyConsistentGreen);
+  
   renderAllTables();
 }
 
@@ -287,8 +305,9 @@ function resetAllFilters() {
   document.getElementById('filter-status').value = '';
 
   onlyCriticalRisk = false;
-  const btnRisk = document.getElementById('btn-critical-risk');
-  if (btnRisk) btnRisk.classList.remove('active');
+  onlyConsistentGreen = false;
+  document.getElementById('btn-critical-risk')?.classList.remove('active');
+  document.getElementById('btn-consistent-green')?.classList.remove('active');
 
   Object.keys(sortState).forEach(tableId => {
     sortState[tableId] = { column: null, isAsc: true };
@@ -299,7 +318,7 @@ function resetAllFilters() {
 
 // Evaluador de 3 meses consecutivos < 50%
 function hasThreeConsecutiveLowMonths(agentMonthsData) {
-  const monthKeys = Object.keys(MONTH_URLS); // Orden cronológico de meses
+  const monthKeys = Object.keys(MONTH_URLS);
   let consecutiveLowCount = 0;
 
   for (let m of monthKeys) {
@@ -310,10 +329,32 @@ function hasThreeConsecutiveLowMonths(agentMonthsData) {
         consecutiveLowCount++;
         if (consecutiveLowCount >= 3) return true;
       } else {
-        consecutiveLowCount = 0; // Se reinicia si recupera el rendimiento
+        consecutiveLowCount = 0;
       }
     } else {
-      consecutiveLowCount = 0; // Se reinicia si el mes no está activo
+      consecutiveLowCount = 0;
+    }
+  }
+  return false;
+}
+
+// Evaluador de 2 meses consecutivos >= 90%
+function hasTwoConsecutiveGreenMonths(agentMonthsData) {
+  const monthKeys = Object.keys(MONTH_URLS);
+  let consecutiveGreenCount = 0;
+
+  for (let m of monthKeys) {
+    const record = agentMonthsData[m];
+    if (record && record.cumplimiento !== '-') {
+      const pct = parseNum(record.cumplimiento);
+      if (pct >= 90) {
+        consecutiveGreenCount++;
+        if (consecutiveGreenCount >= 2) return true;
+      } else {
+        consecutiveGreenCount = 0;
+      }
+    } else {
+      consecutiveGreenCount = 0;
     }
   }
   return false;
@@ -323,10 +364,11 @@ function hasThreeConsecutiveLowMonths(agentMonthsData) {
 // 4. CAMBIO DE PESTAÑAS
 // ==========================================
 function switchTab(tabName, evt) {
-// Desactivar filtro de riesgo crítico si sale de la pestaña foco
-  if (tabName !== 'focus' && onlyCriticalRisk) {
-    toggleCriticalRiskFilter();
+  if (tabName !== 'focus') {
+    if (onlyCriticalRisk) toggleCriticalRiskFilter();
+    if (onlyConsistentGreen) toggleConsistentGreenFilter();
   }
+  
   document.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
   
   const tabAgents = document.getElementById('tab-agents');
@@ -471,7 +513,7 @@ function renderTable(data) {
   });
 }
 
-// TABLA FOCO: Matriz por Agente con Cierre, Cumpl. % por Mes, Gráficos y Filtro de Riesgo Crítico
+// TABLA FOCO: Matriz por Agente con Cierre, Cumpl. % por Mes, Gráficos y Filtros Rápido
 function renderFocusTable(data) {
   const table = document.getElementById('focus-table');
   if (!table) return;
@@ -531,13 +573,23 @@ function renderFocusTable(data) {
 
   let agentsList = Object.values(agentsMap);
 
-  // 3. Aplicar Filtro Rápido de Riesgo Crítico si está activo
+  // 3. Aplicar Filtro Rápido (Riesgo Crítico o 2 Meses en Verde)
   if (onlyCriticalRisk) {
     agentsList = agentsList.filter(agent => hasThreeConsecutiveLowMonths(agent.monthsData));
+  } else if (onlyConsistentGreen) {
+    agentsList = agentsList.filter(agent => hasTwoConsecutiveGreenMonths(agent.monthsData));
   }
 
+  // Mensaje si no hay registros tras aplicar los filtros
   if (agentsList.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="15" style="text-align:center;">No hay agentes en Riesgo Crítico con los filtros seleccionados.</td></tr>';
+    let emptyMessage = 'No hay datos disponibles con los filtros seleccionados.';
+    if (onlyCriticalRisk) {
+      emptyMessage = '⚠️ No hay ninguna Promotora o Promotor en Riesgo Crítico (3 meses seguidos en rojo < 50%) con los filtros aplicados.';
+    } else if (onlyConsistentGreen) {
+      emptyMessage = '🌟 No hay ninguna Promotora o Promotor con 2 meses consecutivos en verde (≥ 90%) con los filtros aplicados.';
+    }
+    const totalCols = (monthsToDisplay.length * 2) + 2;
+    tbody.innerHTML = `<tr><td colspan="${totalCols}" style="text-align:center; padding: 20px; font-weight: bold; color: #555;">${emptyMessage}</td></tr>`;
     return;
   }
 

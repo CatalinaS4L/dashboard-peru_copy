@@ -99,9 +99,14 @@
     <section id="tab-focus" class="table-card tab-content" style="display: none;">
       <div class="table-header-flex">
         <h2>Foco Rendimiento por Agente</h2>
-        <button id="btn-critical-risk" type="button" class="btn-risk" onclick="toggleCriticalRiskFilter()">
-          ⚠️ Agentes en Riesgo Crítico
-        </button>
+        <div class="header-buttons" style="display: flex; gap: 10px;">
+          <button id="btn-critical-risk" type="button" class="btn-risk" onclick="toggleCriticalRiskFilter()">
+            ⚠️ Mostrar Agentes en Riesgo Crítico
+          </button>
+          <button id="btn-consistent-green" type="button" class="btn-green" onclick="toggleConsistentGreenFilter()">
+            🌟 Mostrar Agentes 2 Meses en Verde
+          </button>
+        </div>
       </div>
       <div class="table-wrapper">
         <table id="focus-table">
