@@ -4,7 +4,7 @@
 const timestamp = new Date().getTime();
 
 
-// CAMBIADO POR EL NORMALIZADO POR VER COSAS xd
+// CAMBIADO POR EL NORMALIZADO POR VER COSAS xd NO OLVIDAR CAMBIAR A LOS OTROS LINKS EN LINKS_MESES_TEST.txt
 const MONTH_URLS = {
   febrero: `https://docs.google.com/spreadsheets/d/e/2PACX-1vS8XA4ddmXQF3tJcKew8WhY5Tr8LfjX1E2hkHWZG4u7w8ASutVxoF5jyOinttJyNr1yXpKv6ueoxsUZ/pub?gid=0&single=true&output=csv&_cb=${timestamp}`,
   marzo: `https://docs.google.com/spreadsheets/d/e/2PACX-1vS8XA4ddmXQF3tJcKew8WhY5Tr8LfjX1E2hkHWZG4u7w8ASutVxoF5jyOinttJyNr1yXpKv6ueoxsUZ/pub?gid=397555912&single=true&output=csv&_cb=${timestamp}`,
@@ -21,6 +21,7 @@ let focusCharts = [];
 // Variables de estado de los filtros rápidos
 let onlyCriticalRisk = false; 
 let onlyConsistentGreen = false;
+let onlyRegularPerformers = false;
 
 let sortState = {
   'agents-table': { column: null, isAsc: true },
@@ -308,6 +309,8 @@ function resetAllFilters() {
 
   onlyCriticalRisk = false;
   onlyConsistentGreen = false;
+  onlyRegularPerformers = false;
+  updateFilterButtonsUI();
   document.getElementById('btn-critical-risk')?.classList.remove('active');
   document.getElementById('btn-consistent-green')?.classList.remove('active');
 
@@ -575,11 +578,17 @@ function renderFocusTable(data) {
 
   let agentsList = Object.values(agentsMap);
 
-  // 3. Aplicar Filtro Rápido (Riesgo Crítico o 2 Meses en Verde)
+  // 3. Aplicar Filtros RÁPIDOS
   if (onlyCriticalRisk) {
     agentsList = agentsList.filter(agent => hasThreeConsecutiveLowMonths(agent.monthsData));
   } else if (onlyConsistentGreen) {
     agentsList = agentsList.filter(agent => hasTwoConsecutiveGreenMonths(agent.monthsData));
+  } else if (onlyRegularPerformers) {
+    // Filtra agentes que NO son Riesgo Crítico NI tampoco 2 Meses en Verde
+    agentsList = agentsList.filter(agent => 
+      !hasThreeConsecutiveLowMonths(agent.monthsData) && 
+      !hasTwoConsecutiveGreenMonths(agent.monthsData)
+    );
   }
 
   // Mensaje si no hay registros tras aplicar los filtros
@@ -589,6 +598,8 @@ function renderFocusTable(data) {
       emptyMessage = '⚠️ No hay ninguna Promotora o Promotor en Riesgo Crítico (3 meses seguidos en rojo < 50%) con los filtros aplicados.';
     } else if (onlyConsistentGreen) {
       emptyMessage = '🌟 No hay ninguna Promotora o Promotor con 2 meses consecutivos en verde (≥ 90%) con los filtros aplicados.';
+    } else if (onlyRegularPerformers) {
+      emptyMessage = '📊 No hay ninguna Promotora o Promotor en categoría Regular con los filtros aplicados.';
     }
     const totalCols = (monthsToDisplay.length * 2) + 2;
     tbody.innerHTML = `<tr><td colspan="${totalCols}" style="text-align:center; padding: 20px; font-weight: bold; color: #555;">${emptyMessage}</td></tr>`;
@@ -977,3 +988,41 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('btn-reset').addEventListener('click', resetAllFilters);
   preloadAllMonths();
 });
+
+// MÁS FUNCIONES AÑADIDAS
+function updateFilterButtonsUI() {
+  document.getElementById('btn-critical-risk')?.classList.toggle('active', onlyCriticalRisk);
+  document.getElementById('btn-consistent-green')?.classList.toggle('active', onlyConsistentGreen);
+  document.getElementById('btn-regular-performers')?.classList.toggle('active', onlyRegularPerformers);
+}
+
+function toggleCriticalRiskFilter() {
+  onlyCriticalRisk = !onlyCriticalRisk;
+  if (onlyCriticalRisk) {
+    onlyConsistentGreen = false;
+    onlyRegularPerformers = false;
+  }
+  updateFilterButtonsUI();
+  renderAllTables();
+}
+
+function toggleConsistentGreenFilter() {
+  onlyConsistentGreen = !onlyConsistentGreen;
+  if (onlyConsistentGreen) {
+    onlyCriticalRisk = false;
+    onlyRegularPerformers = false;
+  }
+  updateFilterButtonsUI();
+  renderAllTables();
+}
+
+// Nueva función para el tercer botón
+function toggleRegularPerformersFilter() {
+  onlyRegularPerformers = !onlyRegularPerformers;
+  if (onlyRegularPerformers) {
+    onlyCriticalRisk = false;
+    onlyConsistentGreen = false;
+  }
+  updateFilterButtonsUI();
+  renderAllTables();
+}
