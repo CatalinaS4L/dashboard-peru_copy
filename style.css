@@ -210,9 +210,11 @@ th:hover {
   font-weight: bold;
   transition: background 0.2s;
 }
+
 .btn-risk:hover {
   background-color: #d8525b;
-}
+} /* <-- AQUÍ FALTABA CERRAR LA LLAVE */
+
 .btn-risk.active {
   background-color: #900c3f;
   box-shadow: inset 0 0 5px rgba(0,0,0,0.5);
@@ -240,12 +242,15 @@ th:hover {
   font-weight: bold;
   transition: background 0.2s, box-shadow 0.2s;
 }
+
 .btn-green:hover {
   background-color: #059669;
 }
+
 .btn-green.active {
   background-color: #046c4e;
   box-shadow: inset 0 0 5px rgba(0,0,0,0.5);
   border: 1px solid #fff;
 }
+
 
