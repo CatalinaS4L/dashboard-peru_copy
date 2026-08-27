@@ -1044,7 +1044,7 @@ function renderDiagnosticTable(data) {
   tbody.innerHTML = '';
 
   if (!data || data.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;">No hay datos disponibles.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;">No hay datos disponibles.</td></tr>';
     return;
   }
 
@@ -1066,7 +1066,7 @@ function renderDiagnosticTable(data) {
   });
 
   if (diagnosticAgents.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; padding: 20px;">No se encontraron agentes con evaluaciones de diagnóstico registradas.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="8" style="text-align:center; padding: 20px;">No se encontraron agentes con evaluaciones de diagnóstico registradas.</td></tr>';
     return;
   }
 
@@ -1077,13 +1077,12 @@ function renderDiagnosticTable(data) {
     const isAsc = sortInfo.isAsc;
 
     diagnosticAgents.sort((a, b) => {
-      let valA = getRowValue(a, col);
-      let valB = getRowValue(b, col);
+      let valA = col === '_MES_ORIGEN' ? (a._MES_ORIGEN || '') : getRowValue(a, col);
+      let valB = col === '_MES_ORIGEN' ? (b._MES_ORIGEN || '') : getRowValue(b, col);
 
-      let numA = parseNum(valA);
-      let numB = parseNum(valB);
-
-      if (col !== 'PROMOTOR') {
+      if (col !== 'PROMOTOR' && col !== '_MES_ORIGEN') {
+        let numA = parseNum(valA);
+        let numB = parseNum(valB);
         return isAsc ? numA - numB : numB - numA;
       }
 
@@ -1098,6 +1097,11 @@ function renderDiagnosticTable(data) {
   // 3. Generar filas
   diagnosticAgents.forEach(row => {
     const agent = getRowValue(row, 'PROMOTOR') || '-';
+    
+    // Obtener y formatear el mes
+    const rawMes = row._MES_ORIGEN || '';
+    const mesFormatted = rawMes ? (rawMes.charAt(0).toUpperCase() + rawMes.slice(1)) : '-';
+
     const habCom = getScoreBadge(getRowValue(row, 'NOTA HABILIDADES COMUNICATIVAS'));
     const sondeo = getScoreBadge(getRowValue(row, 'NOTA SONDEO'));
     const pers = getScoreBadge(getRowValue(row, 'NOTA PERSONALIZACIÓN'));
@@ -1108,6 +1112,7 @@ function renderDiagnosticTable(data) {
     const tr = document.createElement('tr');
     tr.innerHTML = `
       <td><strong>${agent}</strong></td>
+      <td><span style="background: #e2e8f0; color: #334155; padding: 2px 8px; border-radius: 4px; font-weight: 600; font-size: 0.85em;">${mesFormatted}</span></td>
       <td style="text-align:center;">${habCom}</td>
       <td style="text-align:center;">${sondeo}</td>
       <td style="text-align:center;">${pers}</td>
