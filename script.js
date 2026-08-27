@@ -1111,7 +1111,6 @@ function renderDiagnosticTable(data) {
     const tr = document.createElement('tr');
     tr.innerHTML = `
       <td><strong>${agent}</strong></td>
-      <td><strong>${mesFormatted}</td>
       <td><span style="background: #e2e8f0; color: #334155; padding: 2px 8px; border-radius: 4px; font-weight: 600; font-size: 0.85em;">${mesFormatted}</span></td>
       <td style="text-align:center;">${habCom}</td>
       <td style="text-align:center;">${sondeo}</td>
