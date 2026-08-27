@@ -28,6 +28,7 @@
       <button class="tab-button" onclick="switchTab('leaders', event)">Acumulativo por Líder</button>
       <button class="tab-button" onclick="switchTab('trends', event)">Tendencias Semanales</button>
       <button class="tab-button" onclick="switchTab('sessions', event)">Sesiones Trainer</button>
+      <button class="tab-button" onclick="switchTab('diagnostic', event)">Monitoreo Diagnóstico</button>
     </div>
 
     <!-- 2. BARRA DE FILTROS -->
@@ -200,6 +201,29 @@
     <section id="tab-sessions" class="tab-content" style="display: none;">
       <div id="trainer-sessions-container" class="sessions-cards-grid">
         <!-- Se genera dinámicamente mediante JS -->
+      </div>
+    </section>
+
+    <!-- TAB 5: Monitoreo Diagnóstico -->
+    <section id="tab-diagnostic" class="tab-content" style="display: none;">
+      <div class="table-card">
+        <h2>Evaluación y Diagnóstico por Agente</h2>
+        <div class="table-wrapper">
+          <table id="diagnostic-table">
+            <thead>
+              <tr>
+                <th onclick="handleSort('diagnostic-table', 'PROMOTOR')">Agente</th>
+                <th onclick="handleSort('diagnostic-table', 'NOTA HABILIDADES COMUNICATIVAS')">Hab. Comunicativas</th>
+                <th onclick="handleSort('diagnostic-table', 'NOTA SONDEO')">Sondeo</th>
+                <th onclick="handleSort('diagnostic-table', 'NOTA PERSONALIZACIÓN')">Personalización</th>
+                <th onclick="handleSort('diagnostic-table', 'NOTA MANEJO DE OBJECIONES')">Manejo Objeciones</th>
+                <th onclick="handleSort('diagnostic-table', 'NOTA CIERRE')">Cierre</th>
+                <th onclick="handleSort('diagnostic-table', 'NOTA FINAL')">Nota Final</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
       </div>
     </section>
 

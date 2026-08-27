@@ -27,7 +27,8 @@ let sortState = {
   'agents-table': { column: null, isAsc: true },
   'focus-table': { column: null, isAsc: true },
   'supervisors-table': { column: null, isAsc: true },
-  'coordinators-table': { column: null, isAsc: true }
+  'coordinators-table': { column: null, isAsc: true },
+  'diagnostic-table': { column: null, isAsc: true }
 };
 
 // Función de lectura tolerante a prefijos o saltos de línea
@@ -181,6 +182,7 @@ function renderAllTables() {
 
   renderFocusTable(filteredData);
   renderLeadersTables(filteredData);
+  renderDiagnosticTable(filteredData);
   
   const tabTrends = document.getElementById('tab-trends');
   if (tabTrends && tabTrends.style.display !== 'none') {
@@ -381,12 +383,14 @@ function switchTab(tabName, evt) {
   const tabLeaders = document.getElementById('tab-leaders');
   const tabTrends = document.getElementById('tab-trends');
   const tabSessions = document.getElementById('tab-sessions');
+  const tabDiagnostic = document.getElementById('tab-diagnostic');
 
   if (tabAgents) tabAgents.style.display = 'none';
   if (tabFocus) tabFocus.style.display = 'none';
   if (tabLeaders) tabLeaders.style.display = 'none';
   if (tabTrends) tabTrends.style.display = 'none';
   if (tabSessions) tabSessions.style.display = 'none';
+  if (tabDiagnostic) tabDiagnostic.style.display = 'none';
 
   if (tabName === 'agents' && tabAgents) tabAgents.style.display = 'block';
   if (tabName === 'focus' && tabFocus) tabFocus.style.display = 'block';
@@ -398,6 +402,11 @@ function switchTab(tabName, evt) {
   if (tabName === 'sessions' && tabSessions) {
     tabSessions.style.display = 'block';
     renderTrainerSessions(filteredData);
+  }
+  
+  if (tabName === 'diagnostic' && tabDiagnostic) {
+    tabDiagnostic.style.display = 'block';
+    renderDiagnosticTable(filteredData);
   }
 
   if (evt && evt.currentTarget) {
@@ -427,6 +436,8 @@ function handleSort(tableId, columnKey) {
     renderGroupedTable(filteredData, 'SUPERVISOR', '#supervisors-table tbody', 'supervisors-table');
   } else if (tableId === 'coordinators-table') {
     renderGroupedTable(filteredData, 'COORDINADOR', '#coordinators-table tbody', 'coordinators-table');
+  } else if (tableId === 'diagnostic-table') {
+    renderDiagnosticTable(filteredData);
   }
 }
 
@@ -973,22 +984,6 @@ function renderTrainerSessions(data) {
   });
 }
 
-// ==========================================
-// 7. INICIALIZACIÓN
-// ==========================================
-document.addEventListener('DOMContentLoaded', () => {
-  populateMonthSelector();
-  
-  const searchInput = document.getElementById('filter-search');
-  if (searchInput) {
-    searchInput.addEventListener('input', filterData);
-  }
-
-  document.getElementById('filter-mes').addEventListener('change', loadDashboardData);
-  document.getElementById('btn-reset').addEventListener('click', resetAllFilters);
-  preloadAllMonths();
-});
-
 // MÁS FUNCIONES AÑADIDAS
 function updateFilterButtonsUI() {
   document.getElementById('btn-critical-risk')?.classList.toggle('active', onlyCriticalRisk);
@@ -1026,3 +1021,116 @@ function toggleRegularPerformersFilter() {
   updateFilterButtonsUI();
   renderAllTables();
 }
+
+// Función para crear la etiqueta visual según la nota %
+function getScoreBadge(valueStr) {
+  if (!valueStr || valueStr === '-' || valueStr.trim() === '') return '-';
+  
+  let num = parseNum(valueStr);
+  let colorClass = 'red';
+  
+  if (num >= 90) {
+    colorClass = 'green';
+  } else if (num >= 50) {
+    colorClass = 'yellow';
+  }
+
+  return `<span class="score-badge ${colorClass}">${num.toFixed(1)}%</span>`;
+}
+
+function renderDiagnosticTable(data) {
+  const tbody = document.querySelector('#diagnostic-table tbody');
+  if (!tbody) return;
+  tbody.innerHTML = '';
+
+  if (!data || data.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;">No hay datos disponibles.</td></tr>';
+    return;
+  }
+
+  const columns = [
+    'NOTA HABILIDADES COMUNICATIVAS',
+    'NOTA SONDEO',
+    'NOTA PERSONALIZACIÓN',
+    'NOTA MANEJO DE OBJECIONES',
+    'NOTA CIERRE',
+    'NOTA FINAL'
+  ];
+
+  // 1. Filtrar solo agentes que tienen al menos UNA nota válida
+  let diagnosticAgents = data.filter(row => {
+    return columns.some(col => {
+      const val = getRowValue(row, col);
+      return val && val !== '-' && val.trim() !== '';
+    });
+  });
+
+  if (diagnosticAgents.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; padding: 20px;">No se encontraron agentes con evaluaciones de diagnóstico registradas.</td></tr>';
+    return;
+  }
+
+  // 2. Aplicar ordenamiento si la columna está seleccionada
+  const sortInfo = sortState['diagnostic-table'];
+  if (sortInfo && sortInfo.column) {
+    const col = sortInfo.column;
+    const isAsc = sortInfo.isAsc;
+
+    diagnosticAgents.sort((a, b) => {
+      let valA = getRowValue(a, col);
+      let valB = getRowValue(b, col);
+
+      let numA = parseNum(valA);
+      let numB = parseNum(valB);
+
+      if (col !== 'PROMOTOR') {
+        return isAsc ? numA - numB : numB - numA;
+      }
+
+      valA = valA.toLowerCase();
+      valB = valB.toLowerCase();
+      if (valA < valB) return isAsc ? -1 : 1;
+      if (valA > valB) return isAsc ? 1 : -1;
+      return 0;
+    });
+  }
+
+  // 3. Generar filas
+  diagnosticAgents.forEach(row => {
+    const agent = getRowValue(row, 'PROMOTOR') || '-';
+    const habCom = getScoreBadge(getRowValue(row, 'NOTA HABILIDADES COMUNICATIVAS'));
+    const sondeo = getScoreBadge(getRowValue(row, 'NOTA SONDEO'));
+    const pers = getScoreBadge(getRowValue(row, 'NOTA PERSONALIZACIÓN'));
+    const objeciones = getScoreBadge(getRowValue(row, 'NOTA MANEJO DE OBJECIONES'));
+    const cierre = getScoreBadge(getRowValue(row, 'NOTA CIERRE'));
+    const finalScore = getScoreBadge(getRowValue(row, 'NOTA FINAL'));
+
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td><strong>${agent}</strong></td>
+      <td style="text-align:center;">${habCom}</td>
+      <td style="text-align:center;">${sondeo}</td>
+      <td style="text-align:center;">${pers}</td>
+      <td style="text-align:center;">${objeciones}</td>
+      <td style="text-align:center;">${cierre}</td>
+      <td style="text-align:center;"><strong>${finalScore}</strong></td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+// ==========================================
+// 7. INICIALIZACIÓN
+// ==========================================
+document.addEventListener('DOMContentLoaded', () => {
+  populateMonthSelector();
+  
+  const searchInput = document.getElementById('filter-search');
+  if (searchInput) {
+    searchInput.addEventListener('input', filterData);
+  }
+
+  document.getElementById('filter-mes').addEventListener('change', loadDashboardData);
+  document.getElementById('btn-reset').addEventListener('click', resetAllFilters);
+  preloadAllMonths();
+});

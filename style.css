@@ -275,4 +275,33 @@ th:hover {
   border: 1px solid #fff;
 }
 
+/* Estilos para badges de calificaciones de Monitoreo Diagnóstico */
+.score-badge {
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-weight: bold;
+  font-size: 0.85em;
+  text-align: center;
+  min-width: 55px;
+}
+
+.score-badge.red {
+  background-color: #fee2e2;
+  color: #991b1b;
+  border: 1px solid #f87171;
+}
+
+.score-badge.yellow {
+  background-color: #fef3c7;
+  color: #92400e;
+  border: 1px solid #fbbf24;
+}
+
+.score-badge.green {
+  background-color: #d1fae5;
+  color: #065f46;
+  border: 1px solid #34d399;
+}
+
 
