@@ -304,4 +304,33 @@ th:hover {
   border: 1px solid #34d399;
 }
 
+/* Subpestañas (Pestañas secundarias) */
+.subtabs-container {
+  border-bottom: 2px solid #e2e8f0;
+  padding-bottom: 8px;
+}
+
+.subtab-button {
+  padding: 6px 14px;
+  background-color: #f1f5f9;
+  border: 1px solid #cbd5e1;
+  border-radius: 4px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #64748b;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.subtab-button.active {
+  background-color: #0f172a;
+  color: #ffffff;
+  border-color: #0f172a;
+}
+
+.subtab-button:hover:not(.active) {
+  background-color: #e2e8f0;
+  color: #1e293b;
+}
+
 

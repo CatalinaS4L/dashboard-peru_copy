@@ -193,6 +193,11 @@ function renderAllTables() {
   if (tabSessions && tabSessions.style.display !== 'none') {
     renderTrainerSessions(filteredData);
   }
+
+  const activeSubtab = document.querySelector('#tab-trends .subtab-button.active');
+  if (activeSubtab && activeSubtab.textContent.includes('Líder')) {
+    renderTrendsLeaderTable();
+  }
 }
 
 function buildAgentMonthsMap() {
@@ -931,32 +936,37 @@ function renderTrainerSessions(data) {
     });
   });
 
-  Object.keys(agentMonthMap).forEach(key => {
+  // Filtrar tarjetas vacías (solo mantener los registros que tienen al menos 1 sesión)
+  const cardsWithSessions = Object.keys(agentMonthMap).filter(key => agentMonthMap[key].sessions.length > 0);
+
+  // Si no hay ninguna tarjeta con sesiones
+  if (cardsWithSessions.length === 0) {
+    container.innerHTML = '<div class="table-card" style="text-align:center; padding: 20px;">No se encontraron sesiones registradas para los filtros aplicados.</div>';
+    return;
+  }
+
+  // Generar tarjetas únicamente para quienes tienen sesiones
+  cardsWithSessions.forEach(key => {
     const info = agentMonthMap[key];
     const card = document.createElement('div');
     card.className = 'table-card agent-session-card';
     card.style.marginBottom = '20px';
 
-    let sessionsHTML = '';
-    if (info.sessions.length === 0) {
-      sessionsHTML = '<p style="color: #777; font-style: italic;">Sin sesiones registradas en este mes.</p>';
-    } else {
-      sessionsHTML = info.sessions.map(s => `
-        <div class="session-block" style="border: 1px solid #e0e0e0; border-radius: 6px; padding: 12px; margin-top: 10px; background-color: #f9f9f9;">
-          <div style="font-weight: bold; color: #2c3e50; margin-bottom: 8px; border-bottom: 1px solid #ddd; padding-bottom: 4px;">
-            ${s.num} — Fecha: <span style="font-weight: normal;">${s.fecha}</span>
-          </div>
-          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 8px; font-size: 0.9em;">
-            <div><strong>URLTr:</strong> ${s.urlTr !== '-' ? `<a href="${s.urlTr}" target="_blank">Ver Enlace</a>` : '-'}</div>
-            <div><strong>Speech:</strong> ${s.speech}</div>
-            <div><strong>Producto:</strong> ${s.producto}</div>
-            <div><strong>Objeciones:</strong> ${s.objeciones}</div>
-            <div><strong>Cierre:</strong> ${s.cierre}</div>
-            <div style="grid-column: 1 / -1;"><strong>Acuerdos + Estado:</strong> ${s.acuerdosEstado}</div>
-          </div>
+    const sessionsHTML = info.sessions.map(s => `
+      <div class="session-block" style="border: 1px solid #e0e0e0; border-radius: 6px; padding: 12px; margin-top: 10px; background-color: #f9f9f9;">
+        <div style="font-weight: bold; color: #2c3e50; margin-bottom: 8px; border-bottom: 1px solid #ddd; padding-bottom: 4px;">
+          ${s.num} — Fecha: <span style="font-weight: normal;">${s.fecha}</span>
         </div>
-      `).join('');
-    }
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 8px; font-size: 0.9em;">
+          <div><strong>URLTr:</strong> ${s.urlTr !== '-' ? `<a href="${s.urlTr}" target="_blank">Ver Enlace</a>` : '-'}</div>
+          <div><strong>Speech:</strong> ${s.speech}</div>
+          <div><strong>Producto:</strong> ${s.producto}</div>
+          <div><strong>Objeciones:</strong> ${s.objeciones}</div>
+          <div><strong>Cierre:</strong> ${s.cierre}</div>
+          <div style="grid-column: 1 / -1;"><strong>Acuerdos + Estado:</strong> ${s.acuerdosEstado}</div>
+        </div>
+      </div>
+    `).join('');
 
     card.innerHTML = `
       <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #3498db; padding-bottom: 8px; margin-bottom: 12px;">
@@ -1121,6 +1131,124 @@ function renderDiagnosticTable(data) {
     `;
     tbody.appendChild(tr);
   });
+}
+
+// Función para cambiar de subpestaña dentro de una pestaña principal
+function switchSubTab(subTabName, evt) {
+  // Ocultar todos los contenidos de subpestañas dentro de tendencias
+  document.querySelectorAll('#tab-trends .subtab-content').forEach(el => {
+    el.style.display = 'none';
+  });
+
+  // Remover clase active de los botones de subpestañas
+  document.querySelectorAll('#tab-trends .subtab-button').forEach(btn => {
+    btn.classList.remove('active');
+  });
+
+  // Mostrar el subcontenido seleccionado
+  const targetSubTab = document.getElementById(`subtab-${subTabName}`);
+  if (targetSubTab) {
+    targetSubTab.style.display = 'block';
+  }
+
+  // Marcar botón activo
+  if (evt && evt.currentTarget) {
+    evt.currentTarget.classList.add('active');
+  }
+
+  // Renderizar la tabla correspondiente
+  if (subTabName === 'trends-agent') {
+    renderTrendsTable();
+  } else if (subTabName === 'trends-leader') {
+    renderTrendsLeaderTable();
+  }
+}
+
+// Función para renderizar la tabla Tendencias por Líder
+function renderTrendsLeaderTable() {
+  const tbody = document.querySelector('#trends-leader-table tbody');
+  if (!tbody) return;
+  tbody.innerHTML = '';
+
+  const monthKeys = Object.keys(allMonthsData);
+  if (monthKeys.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="12" style="text-align:center;">No hay datos disponibles.</td></tr>';
+    return;
+  }
+
+  const searchVal = document.getElementById('filter-search')?.value.toLowerCase().trim() || '';
+  const trainerVal = document.getElementById('filter-trainer')?.value;
+  const supervisorVal = document.getElementById('filter-supervisor')?.value;
+  const coordinadorVal = document.getElementById('filter-coordinador')?.value;
+  const statusVal = document.getElementById('filter-status')?.value;
+
+  let hasData = false;
+
+  monthKeys.forEach(monthKey => {
+    const monthData = allMonthsData[monthKey] || [];
+    
+    const filteredMonthData = monthData.filter(item => {
+      const agentName = getRowValue(item, 'PROMOTOR').toLowerCase();
+      const matchSearch = !searchVal || agentName.includes(searchVal);
+      const matchTrainer = !trainerVal || getRowValue(item, 'TRAINER') === trainerVal;
+      const matchSupervisor = !supervisorVal || getRowValue(item, 'SUPERVISOR') === supervisorVal;
+      const matchCoordinador = !coordinadorVal || getRowValue(item, 'COORDINADOR') === coordinadorVal;
+      const matchStatus = !statusVal || getRowValue(item, 'STATUS AGENTE') === statusVal;
+      return matchSearch && matchTrainer && matchSupervisor && matchCoordinador && matchStatus;
+    });
+
+    if (filteredMonthData.length === 0) return;
+
+    // Agrupar por Supervisor en este mes
+    const leaderMap = {};
+    filteredMonthData.forEach(row => {
+      const sup = getRowValue(row, 'SUPERVISOR') || 'Sin Supervisor';
+      if (!leaderMap[sup]) {
+        leaderMap[sup] = {
+          leader: sup,
+          role: 'Supervisor',
+          count: 0, meta: 0, v1: 0, v2: 0, v3: 0, v4: 0, v5: 0, cierre: 0
+        };
+      }
+      leaderMap[sup].count++;
+      leaderMap[sup].meta += parseNum(getRowValue(row, 'META'));
+      leaderMap[sup].v1 += parseNum(getRowValue(row, 'V1'));
+      leaderMap[sup].v2 += parseNum(getRowValue(row, 'V2'));
+      leaderMap[sup].v3 += parseNum(getRowValue(row, 'V3'));
+      leaderMap[sup].v4 += parseNum(getRowValue(row, 'V4'));
+      leaderMap[sup].v5 += parseNum(getRowValue(row, 'V5'));
+      leaderMap[sup].cierre += parseNum(getRowValue(row, 'CIERRE'));
+    });
+
+    const monthFormatted = monthKey.charAt(0).toUpperCase() + monthKey.slice(1);
+
+    Object.values(leaderMap).forEach(l => {
+      hasData = true;
+      const pct = l.meta > 0 ? (l.cierre / l.meta) * 100 : 0;
+      const complianceHTML = getComplianceBadge(pct.toString());
+
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td><strong>${monthFormatted} 2026</strong></td>
+        <td><strong>${l.leader}</strong></td>
+        <td><span style="font-size: 0.8em; background: #e0f2fe; color: #0369a1; padding: 2px 6px; border-radius: 4px;">${l.role}</span></td>
+        <td>${l.count}</td>
+        <td>${l.meta}</td>
+        <td>${l.v1}</td>
+        <td>${l.v2}</td>
+        <td>${l.v3}</td>
+        <td>${l.v4}</td>
+        <td>${l.v5}</td>
+        <td><strong>${l.cierre}</strong></td>
+        <td>${complianceHTML}</td>
+      `;
+      tbody.appendChild(tr);
+    });
+  });
+
+  if (!hasData) {
+    tbody.innerHTML = '<tr><td colspan="12" style="text-align:center;">No hay datos disponibles para los filtros seleccionados.</td></tr>';
+  }
 }
 
 // ==========================================

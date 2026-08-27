@@ -173,28 +173,67 @@
 
     <!-- 5. TAB 3: Tendencias Semanales -->
     <section id="tab-trends" class="tab-content" style="display: none;">
-      <div class="table-card">
-        <h2>Evolución Semanal de Ventas por Mes</h2>
-        <div class="table-wrapper">
-          <table id="trends-table">
-            <thead>
-              <tr>
-                <th>Mes</th>
-                <th>Total Agentes</th>
-                <th>Meta Total</th>
-                <th>V1</th>
-                <th>V2</th>
-                <th>V3</th>
-                <th>V4</th>
-                <th>V5</th>
-                <th>Cierre Acumulado</th>
-                <th>% Cumplimiento</th>
-              </tr>
-            </thead>
-            <tbody></tbody>
-          </table>
+      
+      <!-- Navegación de Subpestañas -->
+      <div class="subtabs-container" style="margin-bottom: 15px; display: flex; gap: 8px;">
+        <button class="subtab-button active" onclick="switchSubTab('trends-agent', event)">Por Agente</button>
+        <button class="subtab-button" onclick="switchSubTab('trends-leader', event)">Por Líder</button>
+      </div>
+    
+      <!-- SUBTAB 1: Por Agente -->
+      <div id="subtab-trends-agent" class="subtab-content">
+        <div class="table-card">
+          <h2>Evolución Semanal de Ventas por Mes (General / Agentes)</h2>
+          <div class="table-wrapper">
+            <table id="trends-table">
+              <thead>
+                <tr>
+                  <th>Mes</th>
+                  <th>Total Agentes</th>
+                  <th>Meta Total</th>
+                  <th>V1</th>
+                  <th>V2</th>
+                  <th>V3</th>
+                  <th>V4</th>
+                  <th>V5</th>
+                  <th>Cierre Acumulado</th>
+                  <th>% Cumplimiento</th>
+                </tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+          </div>
         </div>
       </div>
+    
+      <!-- SUBTAB 2: Por Líder -->
+      <div id="subtab-trends-leader" class="subtab-content" style="display: none;">
+        <div class="table-card">
+          <h2>Evolución Semanal por Líder (Supervisor / Coordinador)</h2>
+          <div class="table-wrapper">
+            <table id="trends-leader-table">
+              <thead>
+                <tr>
+                  <th>Mes</th>
+                  <th>Líder</th>
+                  <th>Rol</th>
+                  <th>Agentes</th>
+                  <th>Meta Total</th>
+                  <th>V1</th>
+                  <th>V2</th>
+                  <th>V3</th>
+                  <th>V4</th>
+                  <th>V5</th>
+                  <th>Cierre</th>
+                  <th>% Cumpl.</th>
+                </tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    
     </section>
 
     <!-- TAB 4: Sesiones Trainer (Tarjetas por Agente) -->
