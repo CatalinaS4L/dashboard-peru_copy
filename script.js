@@ -94,30 +94,38 @@ function populateMonthSelector() {
 async function preloadAllMonths() {
   const monthKeys = Object.keys(MONTH_URLS);
   
-  const promises = monthKeys.map(month => {
-    return new Promise((resolve) => {
-      Papa.parse(MONTH_URLS[month], {
-        download: true,
-        header: true,
-        skipEmptyLines: 'greedy',
-        transformHeader: h => (h ? h.replace(/<[^>]*>/g, '').replace(/[\r\n]/g, '').trim() : ''),          
-        complete: results => {
-          const validData = (results.data || []).map(row => ({
-            ...row,
-            _MES_ORIGEN: month
-          })).filter(row => {
-            const agentVal = getRowValue(row, 'PROMOTOR');
-            return agentVal && agentVal !== '';
-          });
+  const promises = monthKeys.map(async (month) => {
+    try {
+      // Descargamos primero el texto CSV de Google Sheets para evitar bloqueos
+      const response = await fetch(MONTH_URLS[month]);
+      const csvText = await response.text();
 
-          resolve({ month, data: validData });
-        },
-        error: (err) => {
-          console.error(`[ERROR] Error al cargar ${month}:`, err);
-          resolve({ month, data: [] });
-        }
+      return new Promise((resolve) => {
+        Papa.parse(csvText, {
+          header: true,
+          skipEmptyLines: 'greedy',
+          transformHeader: h => (h ? h.replace(/<[^>]*>/g, '').replace(/[\r\n]/g, '').trim() : ''),          
+          complete: results => {
+            const validData = (results.data || []).map(row => ({
+              ...row,
+              _MES_ORIGEN: month
+            })).filter(row => {
+              const agentVal = getRowValue(row, 'PROMOTOR');
+              return agentVal && agentVal !== '';
+            });
+
+            resolve({ month, data: validData });
+          },
+          error: (err) => {
+            console.error(`[ERROR] Error al parsear ${month}:`, err);
+            resolve({ month, data: [] });
+          }
+        });
       });
-    });
+    } catch (err) {
+      console.error(`[ERROR DE RED] No se pudo obtener la hoja de ${month}:`, err);
+      return { month, data: [] };
+    }
   });
 
   const results = await Promise.all(promises);
@@ -680,6 +688,7 @@ function renderFocusTable(data) {
           }]
         },
         options: {
+          animation: false,
           responsive: true,
           maintainAspectRatio: false,
           plugins: {
