@@ -3,8 +3,6 @@
 // ==========================================
 const timestamp = new Date().getTime();
 
-
-// CAMBIADO POR EL NORMALIZADO POR VER COSAS xd NO OLVIDAR CAMBIAR A LOS OTROS LINKS EN LINKS_MESES_TEST.txt
 const MONTH_URLS = {
   febrero: `https://docs.google.com/spreadsheets/d/e/2PACX-1vS8XA4ddmXQF3tJcKew8WhY5Tr8LfjX1E2hkHWZG4u7w8ASutVxoF5jyOinttJyNr1yXpKv6ueoxsUZ/pub?gid=0&single=true&output=csv&_cb=${timestamp}`,
   marzo: `https://docs.google.com/spreadsheets/d/e/2PACX-1vS8XA4ddmXQF3tJcKew8WhY5Tr8LfjX1E2hkHWZG4u7w8ASutVxoF5jyOinttJyNr1yXpKv6ueoxsUZ/pub?gid=397555912&single=true&output=csv&_cb=${timestamp}`,
@@ -509,7 +507,7 @@ function renderTable(data) {
   });
 }
 
-// TABLA FOCO: Matriz por Agente con Cierre, Cumpl. % por Mes, Gráficos y Filtros Rápido
+// TABLA FOCO: Matriz por Agente con Cierre, Cumpl. % por Mes, Gráficos y Ordenamiento Completo
 function renderFocusTable(data) {
   const table = document.getElementById('focus-table');
   if (!table) return;
@@ -530,16 +528,30 @@ function renderFocusTable(data) {
   const selectedMonth = document.getElementById('filter-mes').value;
   let monthsToDisplay = selectedMonth === 'todos' ? Object.keys(MONTH_URLS) : [selectedMonth];
 
-  let headerHTML = '<tr><th onclick="handleSort(\'focus-table\', \'PROMOTOR\')">Agente</th>';
+  const currentSort = sortState['focus-table'] || { column: null, isAsc: true };
+
+  // Helper para generar el indicador visual de ordenación
+  const getSortIndicator = (colKey) => {
+    if (currentSort.column === colKey) {
+      return currentSort.isAsc ? ' ▲' : ' ▼';
+    }
+    return '';
+  };
+
+  // Construcción dinámica de la cabecera con eventos de click para ordenar
+  let headerHTML = `<tr><th onclick="handleSort('focus-table', 'PROMOTOR')" style="cursor:pointer;">Agente${getSortIndicator('PROMOTOR')}</th>`;
   monthsToDisplay.forEach(m => {
     const mesFormatted = m.charAt(0).toUpperCase() + m.slice(1);
-    headerHTML += `<th style="text-align:center;">Cierre (${mesFormatted})</th>`;
-    headerHTML += `<th style="text-align:center;">Cumpl. % (${mesFormatted})</th>`;
+    const colCierre = `cierre_${m}`;
+    const colCumpl = `cumplimiento_${m}`;
+
+    headerHTML += `<th onclick="handleSort('focus-table', '${colCierre}')" style="text-align:center; cursor:pointer;">Cierre (${mesFormatted})${getSortIndicator(colCierre)}</th>`;
+    headerHTML += `<th onclick="handleSort('focus-table', '${colCumpl}')" style="text-align:center; cursor:pointer;">Cumpl. % (${mesFormatted})${getSortIndicator(colCumpl)}</th>`;
   });
   headerHTML += '<th style="text-align:center; min-width: 180px;">Gráfico de Performance</th></tr>';
   thead.innerHTML = headerHTML;
 
-  // 1. Mapear todo el historial por promotor (usando todos los meses disponibles)
+  // 1. Mapear todo el historial por promotor
   const fullAgentsMap = {};
   Object.keys(allMonthsData).forEach(m => {
     allMonthsData[m].forEach(row => {
@@ -575,14 +587,12 @@ function renderFocusTable(data) {
   } else if (onlyConsistentGreen) {
     agentsList = agentsList.filter(agent => hasTwoConsecutiveGreenMonths(agent.monthsData));
   } else if (onlyRegularPerformers) {
-    // Filtra agentes que NO son Riesgo Crítico NI tampoco 2 Meses en Verde
     agentsList = agentsList.filter(agent => 
       !hasThreeConsecutiveLowMonths(agent.monthsData) && 
       !hasTwoConsecutiveGreenMonths(agent.monthsData)
     );
   }
 
-  // Mensaje si no hay registros tras aplicar los filtros
   if (agentsList.length === 0) {
     let emptyMessage = 'No hay datos disponibles con los filtros seleccionados.';
     if (onlyCriticalRisk) {
@@ -597,18 +607,34 @@ function renderFocusTable(data) {
     return;
   }
 
-  const sortInfo = sortState['focus-table'];
-  if (sortInfo && sortInfo.column === 'PROMOTOR') {
+  // 4. Lógica de Ordenamiento por Agente, Cierre o Cumplimiento
+  if (currentSort.column) {
+    const colKey = currentSort.column;
+    const isAsc = currentSort.isAsc;
+
     agentsList.sort((a, b) => {
-      const valA = a.agentName.toLowerCase();
-      const valB = b.agentName.toLowerCase();
-      if (valA < valB) return sortInfo.isAsc ? -1 : 1;
-      if (valA > valB) return sortInfo.isAsc ? 1 : -1;
+      if (colKey === 'PROMOTOR') {
+        const valA = a.agentName.toLowerCase();
+        const valB = b.agentName.toLowerCase();
+        if (valA < valB) return isAsc ? -1 : 1;
+        if (valA > valB) return isAsc ? 1 : -1;
+        return 0;
+      } else if (colKey.startsWith('cierre_')) {
+        const month = colKey.replace('cierre_', '');
+        const valA = a.monthsData[month] ? a.monthsData[month].cierre : 0;
+        const valB = b.monthsData[month] ? b.monthsData[month].cierre : 0;
+        return isAsc ? valA - valB : valB - valA;
+      } else if (colKey.startsWith('cumplimiento_')) {
+        const month = colKey.replace('cumplimiento_', '');
+        const valA = a.monthsData[month] ? parseNum(a.monthsData[month].cumplimiento) : 0;
+        const valB = b.monthsData[month] ? parseNum(b.monthsData[month].cumplimiento) : 0;
+        return isAsc ? valA - valB : valB - valA;
+      }
       return 0;
     });
   }
 
-  // 4. Renderizado
+  // 5. Renderizado
   agentsList.forEach((agent, index) => {
     const tr = document.createElement('tr');
     let rowHTML = `<td><strong>${agent.agentName}</strong></td>`;
@@ -911,16 +937,13 @@ function renderTrainerSessions(data) {
     });
   });
 
-  // Filtrar tarjetas vacías (solo mantener los registros que tienen al menos 1 sesión)
   const cardsWithSessions = Object.keys(agentMonthMap).filter(key => agentMonthMap[key].sessions.length > 0);
 
-  // Si no hay ninguna tarjeta con sesiones
   if (cardsWithSessions.length === 0) {
     container.innerHTML = '<div class="table-card" style="text-align:center; padding: 20px;">No se encontraron sesiones registradas para los filtros aplicados.</div>';
     return;
   }
 
-  // Generar tarjetas únicamente para quienes tienen sesiones
   cardsWithSessions.forEach(key => {
     const info = agentMonthMap[key];
     const card = document.createElement('div');
@@ -969,14 +992,12 @@ function renderTrainerSessions(data) {
   });
 }
 
-// MÁS FUNCIONES AÑADIDAS
 function updateFilterButtonsUI() {
   document.getElementById('btn-critical-risk')?.classList.toggle('active', onlyCriticalRisk);
   document.getElementById('btn-consistent-green')?.classList.toggle('active', onlyConsistentGreen);
   document.getElementById('btn-regular-performers')?.classList.toggle('active', onlyRegularPerformers);
 }
 
-// Alternar filtro de Riesgo Crítico (Desactiva Verde)
 function toggleCriticalRiskFilter() {
   onlyCriticalRisk = !onlyCriticalRisk;
   if (onlyCriticalRisk) {
@@ -986,7 +1007,7 @@ function toggleCriticalRiskFilter() {
   updateFilterButtonsUI();
   renderAllTables();
 }
-// Alternar filtro de 2 Meses Seguidos en Verde (Desactiva Riesgo Crítico)
+
 function toggleConsistentGreenFilter() {
   onlyConsistentGreen = !onlyConsistentGreen;
   if (onlyConsistentGreen) {
@@ -997,7 +1018,6 @@ function toggleConsistentGreenFilter() {
   renderAllTables();
 }
 
-// Nueva función para el tercer botón
 function toggleRegularPerformersFilter() {
   onlyRegularPerformers = !onlyRegularPerformers;
   if (onlyRegularPerformers) {
@@ -1008,7 +1028,6 @@ function toggleRegularPerformersFilter() {
   renderAllTables();
 }
 
-// Función para crear la etiqueta visual según la nota %
 function getScoreBadge(valueStr) {
   if (!valueStr || valueStr === '-' || valueStr.trim() === '') return '-';
   
@@ -1030,7 +1049,7 @@ function renderDiagnosticTable(data) {
   tbody.innerHTML = '';
 
   if (!data || data.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;">No hay datos disponibles.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;">No hay datos disponibles.</td></tr>';
     return;
   }
 
@@ -1043,7 +1062,6 @@ function renderDiagnosticTable(data) {
     'NOTA FINAL'
   ];
 
-  // 1. Filtrar solo agentes que tienen al menos UNA nota válida
   let diagnosticAgents = data.filter(row => {
     return columns.some(col => {
       const val = getRowValue(row, col);
@@ -1052,11 +1070,10 @@ function renderDiagnosticTable(data) {
   });
 
   if (diagnosticAgents.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="8" style="text-align:center; padding: 20px;">No se encontraron agentes con evaluaciones de diagnóstico registradas.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="10" style="text-align:center; padding: 20px;">No se encontraron agentes con evaluaciones de diagnóstico registradas.</td></tr>';
     return;
   }
 
-  // 2. Aplicar ordenamiento si la columna está seleccionada
   const sortInfo = sortState['diagnostic-table'];
   if (sortInfo && sortInfo.column) {
     const col = sortInfo.column;
@@ -1080,19 +1097,24 @@ function renderDiagnosticTable(data) {
     });
   }
 
-  // 3. Generar filas
   diagnosticAgents.forEach(row => {
     const agent = getRowValue(row, 'PROMOTOR') || '-';
     
-    // Obtener y formatear el mes
     const rawMes = row._MES_ORIGEN || '';
     const mesFormatted = rawMes ? (rawMes.charAt(0).toUpperCase() + rawMes.slice(1)) : '-';
+    
     const habCom = getScoreBadge(getRowValue(row, 'NOTA HABILIDADES COMUNICATIVAS'));
     const sondeo = getScoreBadge(getRowValue(row, 'NOTA SONDEO'));
     const pers = getScoreBadge(getRowValue(row, 'NOTA PERSONALIZACIÓN'));
     const objeciones = getScoreBadge(getRowValue(row, 'NOTA MANEJO DE OBJECIONES'));
-    const cierre = getScoreBadge(getRowValue(row, 'NOTA CIERRE'));
+    const cierreNota = getScoreBadge(getRowValue(row, 'NOTA CIERRE'));
     const finalScore = getScoreBadge(getRowValue(row, 'NOTA FINAL'));
+
+    const cierreVentasVal = getRowValue(row, 'CIERRE');
+    const cierreVentasDisplay = cierreVentasVal !== '' ? cierreVentasVal : '0';
+
+    const complianceVal = getRowValue(row, 'CUMPLIMIENTO MES');
+    const complianceHTML = getComplianceBadge(complianceVal);
 
     const tr = document.createElement('tr');
     tr.innerHTML = `
@@ -1102,37 +1124,33 @@ function renderDiagnosticTable(data) {
       <td style="text-align:center;">${sondeo}</td>
       <td style="text-align:center;">${pers}</td>
       <td style="text-align:center;">${objeciones}</td>
-      <td style="text-align:center;">${cierre}</td>
+      <td style="text-align:center;">${cierreNota}</td>
       <td style="text-align:center;"><strong>${finalScore}</strong></td>
+      <td style="text-align:center;"><strong>${cierreVentasDisplay}</strong></td>
+      <td style="text-align:center;">${complianceHTML}</td>
     `;
     tbody.appendChild(tr);
   });
 }
 
-// Función para cambiar de subpestaña dentro de una pestaña principal
 function switchSubTab(subTabName, evt) {
-  // Ocultar todos los contenidos de subpestañas dentro de tendencias
   document.querySelectorAll('#tab-trends .subtab-content').forEach(el => {
     el.style.display = 'none';
   });
 
-  // Remover clase active de los botones de subpestañas
   document.querySelectorAll('#tab-trends .subtab-button').forEach(btn => {
     btn.classList.remove('active');
   });
 
-  // Mostrar el subcontenido seleccionado
   const targetSubTab = document.getElementById(`subtab-${subTabName}`);
   if (targetSubTab) {
     targetSubTab.style.display = 'block';
   }
 
-  // Marcar botón activo
   if (evt && evt.currentTarget) {
     evt.currentTarget.classList.add('active');
   }
 
-  // Renderizar la tabla correspondiente
   if (subTabName === 'trends-agent') {
     renderTrendsTable();
   } else if (subTabName === 'trends-leader') {
@@ -1140,7 +1158,6 @@ function switchSubTab(subTabName, evt) {
   }
 }
 
-// Función para renderizar la tabla Tendencias por Líder
 function renderTrendsLeaderTable() {
   const tbody = document.querySelector('#trends-leader-table tbody');
   if (!tbody) return;
@@ -1175,7 +1192,6 @@ function renderTrendsLeaderTable() {
 
     if (filteredMonthData.length === 0) return;
 
-    // Agrupar por Supervisor en este mes
     const leaderMap = {};
     filteredMonthData.forEach(row => {
       const sup = getRowValue(row, 'SUPERVISOR') || 'Sin Supervisor';
@@ -1227,27 +1243,22 @@ function renderTrendsLeaderTable() {
   }
 }
 
-// Función para calcular y renderizar las 4 métricas principales del Header Summary
 function renderHeaderSummary() {
   const monthKeys = Object.keys(allMonthsData);
   if (monthKeys.length === 0) return;
 
-  // 1. Determinar el último mes registrado dinámicamente
   const lastMonthKey = monthKeys[monthKeys.length - 1];
   const lastMonthData = allMonthsData[lastMonthKey] || [];
   const lastMonthFormatted = lastMonthKey.charAt(0).toUpperCase() + lastMonthKey.slice(1);
 
-  // Obtener la lista de nombres de los agentes que estuvieron activos en el último mes
   const activeAgentsLastMonth = new Set(
     lastMonthData
       .map(row => getRowValue(row, 'PROMOTOR'))
       .filter(name => name && name.trim() !== '')
   );
 
-  // Métrica 1: Cantidad de agentes activos en el último mes
   const totalActive = activeAgentsLastMonth.size;
 
-  // Mapear historial completo de todos los meses por agente
   const fullAgentsMap = {};
   Object.keys(allMonthsData).forEach(m => {
     allMonthsData[m].forEach(row => {
@@ -1264,7 +1275,6 @@ function renderHeaderSummary() {
     });
   });
 
-  // Métrica 2 & 3: Filtrar solo sobre los agentes activos en el último mes
   let countCriticalRisk = 0;
   let countConsistentGreen = 0;
 
@@ -1280,11 +1290,9 @@ function renderHeaderSummary() {
     }
   });
 
-  // Métrica 4: Promedio global de la Nota Final de Diagnóstico (todos los registros filtrados)
   let sumDiagnostic = 0;
   let countDiagnostic = 0;
 
-  // Recorrer todos los meses o los datos cargados para calcular el promedio de calidad
   Object.keys(allMonthsData).forEach(m => {
     allMonthsData[m].forEach(row => {
       const finalNote = getRowValue(row, 'NOTA FINAL');
@@ -1297,7 +1305,6 @@ function renderHeaderSummary() {
 
   const avgQuality = countDiagnostic > 0 ? (sumDiagnostic / countDiagnostic).toFixed(1) : 0;
 
-  // Inyectar valores en el DOM
   const elActive = document.getElementById('kpi-active-agents');
   const elActiveMonth = document.getElementById('kpi-active-month');
   const elRisk = document.getElementById('kpi-critical-risk');
