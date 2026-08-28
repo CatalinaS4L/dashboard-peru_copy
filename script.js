@@ -174,6 +174,9 @@ function loadDashboardData() {
 }
 
 function renderAllTables() {
+
+  renderHeaderSummary();
+
   if (sortState['agents-table'].column) {
     applyAgentSort('agents-table');
   } else {
@@ -253,34 +256,6 @@ function fillSelect(elementId, options) {
     select.addEventListener('change', filterData);
     select.dataset.hasListener = "true";
   }
-}
-
-// Alternar filtro de Riesgo Crítico (Desactiva Verde)
-function toggleCriticalRiskFilter() {
-  onlyCriticalRisk = !onlyCriticalRisk;
-  if (onlyCriticalRisk) {
-    onlyConsistentGreen = false;
-    document.getElementById('btn-consistent-green')?.classList.remove('active');
-  }
-
-  const btn = document.getElementById('btn-critical-risk');
-  if (btn) btn.classList.toggle('active', onlyCriticalRisk);
-  
-  renderAllTables();
-}
-
-// Alternar filtro de 2 Meses Seguidos en Verde (Desactiva Riesgo Crítico)
-function toggleConsistentGreenFilter() {
-  onlyConsistentGreen = !onlyConsistentGreen;
-  if (onlyConsistentGreen) {
-    onlyCriticalRisk = false;
-    document.getElementById('btn-critical-risk')?.classList.remove('active');
-  }
-
-  const btn = document.getElementById('btn-consistent-green');
-  if (btn) btn.classList.toggle('active', onlyConsistentGreen);
-  
-  renderAllTables();
 }
 
 function filterData() {
@@ -1001,6 +976,7 @@ function updateFilterButtonsUI() {
   document.getElementById('btn-regular-performers')?.classList.toggle('active', onlyRegularPerformers);
 }
 
+// Alternar filtro de Riesgo Crítico (Desactiva Verde)
 function toggleCriticalRiskFilter() {
   onlyCriticalRisk = !onlyCriticalRisk;
   if (onlyCriticalRisk) {
@@ -1010,7 +986,7 @@ function toggleCriticalRiskFilter() {
   updateFilterButtonsUI();
   renderAllTables();
 }
-
+// Alternar filtro de 2 Meses Seguidos en Verde (Desactiva Riesgo Crítico)
 function toggleConsistentGreenFilter() {
   onlyConsistentGreen = !onlyConsistentGreen;
   if (onlyConsistentGreen) {
@@ -1249,6 +1225,90 @@ function renderTrendsLeaderTable() {
   if (!hasData) {
     tbody.innerHTML = '<tr><td colspan="12" style="text-align:center;">No hay datos disponibles para los filtros seleccionados.</td></tr>';
   }
+}
+
+// Función para calcular y renderizar las 4 métricas principales del Header Summary
+function renderHeaderSummary() {
+  const monthKeys = Object.keys(allMonthsData);
+  if (monthKeys.length === 0) return;
+
+  // 1. Determinar el último mes registrado dinámicamente
+  const lastMonthKey = monthKeys[monthKeys.length - 1];
+  const lastMonthData = allMonthsData[lastMonthKey] || [];
+  const lastMonthFormatted = lastMonthKey.charAt(0).toUpperCase() + lastMonthKey.slice(1);
+
+  // Obtener la lista de nombres de los agentes que estuvieron activos en el último mes
+  const activeAgentsLastMonth = new Set(
+    lastMonthData
+      .map(row => getRowValue(row, 'PROMOTOR'))
+      .filter(name => name && name.trim() !== '')
+  );
+
+  // Métrica 1: Cantidad de agentes activos en el último mes
+  const totalActive = activeAgentsLastMonth.size;
+
+  // Mapear historial completo de todos los meses por agente
+  const fullAgentsMap = {};
+  Object.keys(allMonthsData).forEach(m => {
+    allMonthsData[m].forEach(row => {
+      const agentName = getRowValue(row, 'PROMOTOR');
+      if (!agentName) return;
+
+      if (!fullAgentsMap[agentName]) {
+        fullAgentsMap[agentName] = { agentName: agentName, monthsData: {} };
+      }
+      fullAgentsMap[agentName].monthsData[m] = {
+        cierre: parseNum(getRowValue(row, 'CIERRE')),
+        cumplimiento: getRowValue(row, 'CUMPLIMIENTO MES') || '-'
+      };
+    });
+  });
+
+  // Métrica 2 & 3: Filtrar solo sobre los agentes activos en el último mes
+  let countCriticalRisk = 0;
+  let countConsistentGreen = 0;
+
+  activeAgentsLastMonth.forEach(agentName => {
+    const agentObj = fullAgentsMap[agentName];
+    if (agentObj) {
+      if (hasThreeConsecutiveLowMonths(agentObj.monthsData)) {
+        countCriticalRisk++;
+      }
+      if (hasTwoConsecutiveGreenMonths(agentObj.monthsData)) {
+        countConsistentGreen++;
+      }
+    }
+  });
+
+  // Métrica 4: Promedio global de la Nota Final de Diagnóstico (todos los registros filtrados)
+  let sumDiagnostic = 0;
+  let countDiagnostic = 0;
+
+  // Recorrer todos los meses o los datos cargados para calcular el promedio de calidad
+  Object.keys(allMonthsData).forEach(m => {
+    allMonthsData[m].forEach(row => {
+      const finalNote = getRowValue(row, 'NOTA FINAL');
+      if (finalNote && finalNote !== '-' && finalNote.trim() !== '') {
+        sumDiagnostic += parseNum(finalNote);
+        countDiagnostic++;
+      }
+    });
+  });
+
+  const avgQuality = countDiagnostic > 0 ? (sumDiagnostic / countDiagnostic).toFixed(1) : 0;
+
+  // Inyectar valores en el DOM
+  const elActive = document.getElementById('kpi-active-agents');
+  const elActiveMonth = document.getElementById('kpi-active-month');
+  const elRisk = document.getElementById('kpi-critical-risk');
+  const elGreen = document.getElementById('kpi-consistent-green');
+  const elQuality = document.getElementById('kpi-avg-quality');
+
+  if (elActive) elActive.textContent = totalActive;
+  if (elActiveMonth) elActiveMonth.textContent = `Mes: ${lastMonthFormatted} 2026`;
+  if (elRisk) elRisk.textContent = countCriticalRisk;
+  if (elGreen) elGreen.textContent = countConsistentGreen;
+  if (elQuality) elQuality.textContent = `${avgQuality}%`;
 }
 
 // ==========================================

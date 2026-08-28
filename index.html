@@ -31,6 +31,30 @@
       <button class="tab-button" onclick="switchTab('diagnostic', event)">Monitoreo Diagnóstico</button>
     </div>
 
+    <!-- HEADER SUMMARY (KPI CARDS) -->
+    <section class="summary-cards-grid">
+      <div class="summary-card">
+        <div class="summary-card-title">Agentes Activos (Último Mes)</div>
+        <div class="summary-card-value" id="kpi-active-agents">-</div>
+        <div class="summary-card-sub" id="kpi-active-month">Mes: -</div>
+      </div>
+      <div class="summary-card border-red">
+        <div class="summary-card-title">Riesgo Crítico (Activos)</div>
+        <div class="summary-card-value text-red" id="kpi-critical-risk">-</div>
+        <div class="summary-card-sub">3+ meses &lt; 50%</div>
+      </div>
+      <div class="summary-card border-green">
+        <div class="summary-card-title">Consistentes Verde (Activos)</div>
+        <div class="summary-card-value text-green" id="kpi-consistent-green">-</div>
+        <div class="summary-card-sub">2+ meses ≥ 90%</div>
+      </div>
+      <div class="summary-card border-blue">
+        <div class="summary-card-title">Promedio Calidad General</div>
+        <div class="summary-card-value text-blue" id="kpi-avg-quality">-</div>
+        <div class="summary-card-sub">Nota Final Diagnóstico</div>
+      </div>
+    </section>
+
     <!-- 2. BARRA DE FILTROS -->
     <section class="filters-card">
       <h2>Filtros</h2>
