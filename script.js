@@ -100,7 +100,7 @@ async function preloadAllMonths() {
         download: true,
         header: true,
         skipEmptyLines: 'greedy',
-        transformHeader: h => (h ? h.replace(/[\r\n]/g, '').trim() : ''),
+        transformHeader: h => (h ? h.replace(/<[^>]*>/g, '').replace(/[\r\n]/g, '').trim() : ''),          
         complete: results => {
           const validData = (results.data || []).map(row => ({
             ...row,
