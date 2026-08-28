@@ -530,23 +530,15 @@ function renderFocusTable(data) {
 
   const currentSort = sortState['focus-table'] || { column: null, isAsc: true };
 
-  // Helper para generar el indicador visual de ordenación
-  const getSortIndicator = (colKey) => {
-    if (currentSort.column === colKey) {
-      return currentSort.isAsc ? ' ▲' : ' ▼';
-    }
-    return '';
-  };
-
-  // Construcción dinámica de la cabecera con eventos de click para ordenar
-  let headerHTML = `<tr><th onclick="handleSort('focus-table', 'PROMOTOR')" style="cursor:pointer;">Agente${getSortIndicator('PROMOTOR')}</th>`;
+// Construcción dinámica de la cabecera con eventos de click para ordenar (sin indicadores visuales)
+  let headerHTML = `<tr><th onclick="handleSort('focus-table', 'PROMOTOR')" style="cursor:pointer;">Agente</th>`;
   monthsToDisplay.forEach(m => {
     const mesFormatted = m.charAt(0).toUpperCase() + m.slice(1);
     const colCierre = `cierre_${m}`;
     const colCumpl = `cumplimiento_${m}`;
 
-    headerHTML += `<th onclick="handleSort('focus-table', '${colCierre}')" style="text-align:center; cursor:pointer;">Cierre (${mesFormatted})${getSortIndicator(colCierre)}</th>`;
-    headerHTML += `<th onclick="handleSort('focus-table', '${colCumpl}')" style="text-align:center; cursor:pointer;">Cumpl. % (${mesFormatted})${getSortIndicator(colCumpl)}</th>`;
+    headerHTML += `<th onclick="handleSort('focus-table', '${colCierre}')" style="text-align:center; cursor:pointer;">Cierre (${mesFormatted})</th>`;
+    headerHTML += `<th onclick="handleSort('focus-table', '${colCumpl}')" style="text-align:center; cursor:pointer;">Cumpl. % (${mesFormatted})</th>`;
   });
   headerHTML += '<th style="text-align:center; min-width: 180px;">Gráfico de Performance</th></tr>';
   thead.innerHTML = headerHTML;
