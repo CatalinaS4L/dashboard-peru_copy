@@ -95,7 +95,7 @@ async function preloadAllMonths() {
   const monthKeys = Object.keys(MONTH_URLS);
   
   // OPCIONAL: Muestra un loader visual en la interfaz aquí si tienes uno
-  document.getElementById('loading-spinner').style.display = 'block';
+  // document.getElementById('loading-spinner').style.display = 'block';
 
   try {
     const results = await Promise.all(
@@ -146,7 +146,7 @@ async function preloadAllMonths() {
     console.error("Error crítico al cargar meses:", globalErr);
   } finally {
     // OPCIONAL: Ocultar el loader visual
-      document.getElementById('loading-spinner').style.display = 'none';
+    // document.getElementById('loading-spinner').style.display = 'none';
   }
 }
 
