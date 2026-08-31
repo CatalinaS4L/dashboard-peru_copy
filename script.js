@@ -174,8 +174,8 @@ function loadDashboardData() {
       .map(m => {
         const nameFormatted = m.charAt(0).toUpperCase() + m.slice(1);
         if (m === currentRowMonth) {
-          // Cambiado: ahora envuelve el mes actual en un recuadro/badge con fondo suave y borde
-          return `<span style="display: inline-block; padding: 2px 6px; background-color: #e2e8f0; border: 1px solid #cbd5e1; border-radius: 4px; font-weight: bold; color: #1e293b;">${nameFormatted}</span>`;
+          // Envuelve el mes actual con el recuadro destacado
+          return `<span class="active-month-badge">${nameFormatted}</span>`;
         }
         return nameFormatted;
       })
