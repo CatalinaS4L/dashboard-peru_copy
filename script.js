@@ -1,14 +1,12 @@
 // ==========================================
 // 1. ENLACES DIRECTOS A GOOGLE SHEETS
 // ==========================================
-const timestamp = new Date().getTime();
-
 const MONTH_URLS = {
   febrero: `https://docs.google.com/spreadsheets/d/e/2PACX-1vS8XA4ddmXQF3tJcKew8WhY5Tr8LfjX1E2hkHWZG4u7w8ASutVxoF5jyOinttJyNr1yXpKv6ueoxsUZ/pub?gid=0&single=true&output=csv`,
   marzo: `https://docs.google.com/spreadsheets/d/e/2PACX-1vS8XA4ddmXQF3tJcKew8WhY5Tr8LfjX1E2hkHWZG4u7w8ASutVxoF5jyOinttJyNr1yXpKv6ueoxsUZ/pub?gid=397555912&single=true&output=csv`,
   abril: `https://docs.google.com/spreadsheets/d/e/2PACX-1vS8XA4ddmXQF3tJcKew8WhY5Tr8LfjX1E2hkHWZG4u7w8ASutVxoF5jyOinttJyNr1yXpKv6ueoxsUZ/pub?gid=1499336465&single=true&output=csv`,
   mayo: `https://docs.google.com/spreadsheets/d/e/2PACX-1vS8XA4ddmXQF3tJcKew8WhY5Tr8LfjX1E2hkHWZG4u7w8ASutVxoF5jyOinttJyNr1yXpKv6ueoxsUZ/pub?gid=289433826&single=true&output=csv`,
-  junio: `https://docs.google.com/spreadsheets/d/e/2PACX-1vS8XA4ddmXQF3tJcKew8WhY5Tr8LfjX1E2hkHWZG4u7w8ASutVxoF5jyOinttJyNr1yXpKv6ueoxsUZ/pub?gid=632786864&single=true&output=csv&_cb=${timestamp}`
+  junio: `https://docs.google.com/spreadsheets/d/e/2PACX-1vS8XA4ddmXQF3tJcKew8WhY5Tr8LfjX1E2hkHWZG4u7w8ASutVxoF5jyOinttJyNr1yXpKv6ueoxsUZ/pub?gid=632786864&single=true&output=csv`
 };
 
 let allMonthsData = {};
@@ -91,9 +89,34 @@ function populateMonthSelector() {
   });
 }
 
+// Función encargada de traer únicamente los datos del mes en curso con bypass de caché
+async function fetchCurrentMonthData() {
+  const monthKeys = Object.keys(MONTH_URLS);
+  const lastMonthKey = monthKeys[monthKeys.length - 1];
+  const freshUrl = `${MONTH_URLS[lastMonthKey]}&_cb=${Date.now()}`;
+
+  await new Promise((resolve) => {
+    Papa.parse(freshUrl, {
+      download: true,
+      header: true,
+      skipEmptyLines: 'greedy',
+      transformHeader: h => (h ? h.replace(/<[^>]*>/g, '').replace(/[\r\n]/g, '').trim() : ''),
+      complete: res => {
+        allMonthsData[lastMonthKey] = (res.data || [])
+          .map(r => ({ ...r, _MES_ORIGEN: lastMonthKey }))
+          .filter(r => getRowValue(r, 'PROMOTOR') !== '');
+        resolve();
+      },
+      error: () => resolve()
+    });
+  });
+
+  loadDashboardData();
+}
+
 async function preloadAllMonths() {
   const monthKeys = Object.keys(MONTH_URLS);
-  const lastMonthKey = monthKeys[monthKeys.length - 1]; // Identifica el mes actual (ej: "junio")
+  const lastMonthKey = monthKeys[monthKeys.length - 1];
 
   const HISTORICAL_CACHE_KEY = 'dashboard_historical_months_v2';
   let cachedHistorical = localStorage.getItem(HISTORICAL_CACHE_KEY);
@@ -125,26 +148,8 @@ async function preloadAllMonths() {
   // Asignar los meses históricos guardados
   allMonthsData = { ...historicalData };
 
-  // 2. Descargar SIEMPRE el último mes en vivo evitando el caché del navegador
-  const freshUrl = `${MONTH_URLS[lastMonthKey]}&_cb=${Date.now()}`;
-
-  await new Promise((resolve) => {
-    Papa.parse(freshUrl, {
-      download: true,
-      header: true,
-      skipEmptyLines: 'greedy',
-      transformHeader: h => (h ? h.replace(/<[^>]*>/g, '').replace(/[\r\n]/g, '').trim() : ''),
-      complete: res => {
-        allMonthsData[lastMonthKey] = (res.data || [])
-          .map(r => ({ ...r, _MES_ORIGEN: lastMonthKey }))
-          .filter(r => getRowValue(r, 'PROMOTOR') !== '');
-        resolve();
-      },
-      error: () => resolve()
-    });
-  });
-
-  loadDashboardData();
+  // 2. Descargar en vivo el mes actual
+  await fetchCurrentMonthData();
 }
 
 function loadDashboardData() {
@@ -549,7 +554,7 @@ function renderFocusTable(data) {
 
   const currentSort = sortState['focus-table'] || { column: null, isAsc: true };
 
-// Construcción dinámica de la cabecera con eventos de click para ordenar (sin indicadores visuales)
+  // Construcción dinámica de la cabecera con eventos de click para ordenar
   let headerHTML = `<tr><th onclick="handleSort('focus-table', 'PROMOTOR')" style="cursor:pointer;">Agente</th>`;
   monthsToDisplay.forEach(m => {
     const mesFormatted = m.charAt(0).toUpperCase() + m.slice(1);
@@ -1343,5 +1348,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
   document.getElementById('filter-mes').addEventListener('change', loadDashboardData);
   document.getElementById('btn-reset').addEventListener('click', resetAllFilters);
+  
   preloadAllMonths();
+
+  // Polling automático cada 2 minutos (120,000 ms) para recargar el mes en curso sin recargar la página
+  setInterval(() => {
+    fetchCurrentMonthData();
+  }, 120000);
 });
