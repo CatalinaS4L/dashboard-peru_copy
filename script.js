@@ -94,60 +94,46 @@ function populateMonthSelector() {
 async function preloadAllMonths() {
   const monthKeys = Object.keys(MONTH_URLS);
   
-  // OPCIONAL: Muestra un loader visual en la interfaz aquí si tienes uno
-  // document.getElementById('loading-spinner').style.display = 'block';
+  const promises = monthKeys.map(async (month) => {
+    try {
+      // Descargamos primero el texto CSV de Google Sheets para evitar bloqueos
+      const response = await fetch(MONTH_URLS[month]);
+      const csvText = await response.text();
 
-  try {
-    const results = await Promise.all(
-      monthKeys.map(async (month) => {
-        try {
-          // Agregamos un timestamp para evitar la caché vieja del navegador y forzar respuesta limpia
-          const response = await fetch(`${MONTH_URLS[month]}&_t=${Date.now()}`);
-          
-          if (!response.ok) throw new Error(`HTTP ${response.status}`);
-          
-          const csvText = await response.text();
-
-          return new Promise((resolve) => {
-            Papa.parse(csvText, {
-              header: true,
-              skipEmptyLines: 'greedy',
-              transformHeader: h => (h ? h.replace(/<[^>]*>/g, '').replace(/[\r\n]/g, '').trim() : ''),          
-              complete: results => {
-                const validData = (results.data || []).map(row => ({
-                  ...row,
-                  _MES_ORIGEN: month
-                })).filter(row => {
-                  const agentVal = getRowValue(row, 'PROMOTOR');
-                  return agentVal && agentVal !== '';
-                });
-
-                resolve({ month, data: validData });
-              },
-              error: () => resolve({ month, data: [] })
+      return new Promise((resolve) => {
+        Papa.parse(csvText, {
+          header: true,
+          skipEmptyLines: 'greedy',
+          transformHeader: h => (h ? h.replace(/<[^>]*>/g, '').replace(/[\r\n]/g, '').trim() : ''),          
+          complete: results => {
+            const validData = (results.data || []).map(row => ({
+              ...row,
+              _MES_ORIGEN: month
+            })).filter(row => {
+              const agentVal = getRowValue(row, 'PROMOTOR');
+              return agentVal && agentVal !== '';
             });
-          });
-        } catch (err) {
-          console.warn(`[REINTENTO/ERROR] No se pudo cargar ${month}:`, err);
-          return { month, data: [] };
-        }
-      })
-    );
 
-    // Asignación segura de datos solo cuando TODAS las promesas han resuelto
-    results.forEach(res => {
-      allMonthsData[res.month] = res.data;
-    });
+            resolve({ month, data: validData });
+          },
+          error: (err) => {
+            console.error(`[ERROR] Error al parsear ${month}:`, err);
+            resolve({ month, data: [] });
+          }
+        });
+      });
+    } catch (err) {
+      console.error(`[ERROR DE RED] No se pudo obtener la hoja de ${month}:`, err);
+      return { month, data: [] };
+    }
+  });
 
-    // Cargar interfaz únicamente al garantizar la data
-    loadDashboardData();
+  const results = await Promise.all(promises);
+  results.forEach(res => {
+    allMonthsData[res.month] = res.data;
+  });
 
-  } catch (globalErr) {
-    console.error("Error crítico al cargar meses:", globalErr);
-  } finally {
-    // OPCIONAL: Ocultar el loader visual
-    // document.getElementById('loading-spinner').style.display = 'none';
-  }
+  loadDashboardData();
 }
 
 function loadDashboardData() {
