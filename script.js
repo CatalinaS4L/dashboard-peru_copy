@@ -92,47 +92,46 @@ function populateMonthSelector() {
 }
 
 async function preloadAllMonths() {
-  const monthKeys = Object.keys(MONTH_URLS);
-  
-  const promises = monthKeys.map(async (month) => {
-    try {
-      // Descargamos primero el texto CSV de Google Sheets para evitar bloqueos
-      const response = await fetch(MONTH_URLS[month]);
-      const csvText = await response.text();
+  const CACHE_KEY = 'dashboard_data_v1';
+  const CACHE_TTL = 15 * 60 * 1000; // Caché de 15 minutos
+  const cached = localStorage.getItem(CACHE_KEY);
 
-      return new Promise((resolve) => {
-        Papa.parse(csvText, {
-          header: true,
-          skipEmptyLines: 'greedy',
-          transformHeader: h => (h ? h.replace(/<[^>]*>/g, '').replace(/[\r\n]/g, '').trim() : ''),          
-          complete: results => {
-            const validData = (results.data || []).map(row => ({
-              ...row,
-              _MES_ORIGEN: month
-            })).filter(row => {
-              const agentVal = getRowValue(row, 'PROMOTOR');
-              return agentVal && agentVal !== '';
-            });
-
-            resolve({ month, data: validData });
-          },
-          error: (err) => {
-            console.error(`[ERROR] Error al parsear ${month}:`, err);
-            resolve({ month, data: [] });
-          }
-        });
-      });
-    } catch (err) {
-      console.error(`[ERROR DE RED] No se pudo obtener la hoja de ${month}:`, err);
-      return { month, data: [] };
+  // 1. Cargar desde memoria caché si existe y está vigente
+  if (cached) {
+    const { time, data } = JSON.parse(cached);
+    if (Date.now() - time < CACHE_TTL) {
+      allMonthsData = data;
+      loadDashboardData();
+      return;
     }
-  });
+  }
+
+  // 2. Descarga directa en paralelo mediante PapaParse download
+  const monthKeys = Object.keys(MONTH_URLS);
+  const promises = monthKeys.map(month => new Promise((resolve) => {
+    Papa.parse(MONTH_URLS[month], {
+      download: true,
+      header: true,
+      skipEmptyLines: 'greedy',
+      transformHeader: h => (h ? h.replace(/<[^>]*>/g, '').replace(/[\r\n]/g, '').trim() : ''),
+      complete: results => {
+        const validData = (results.data || [])
+          .map(row => ({ ...row, _MES_ORIGEN: month }))
+          .filter(row => getRowValue(row, 'PROMOTOR') !== '');
+        resolve({ month, data: validData });
+      },
+      error: (err) => {
+        console.error(`Error cargando ${month}:`, err);
+        resolve({ month, data: [] });
+      }
+    });
+  }));
 
   const results = await Promise.all(promises);
-  results.forEach(res => {
-    allMonthsData[res.month] = res.data;
-  });
+  results.forEach(res => { allMonthsData[res.month] = res.data; });
 
+  // Guardar en caché local
+  localStorage.setItem(CACHE_KEY, JSON.stringify({ time: Date.now(), data: allMonthsData }));
   loadDashboardData();
 }
 
