@@ -8,7 +8,7 @@ const MONTH_URLS = {
   marzo: `https://docs.google.com/spreadsheets/d/e/2PACX-1vS8XA4ddmXQF3tJcKew8WhY5Tr8LfjX1E2hkHWZG4u7w8ASutVxoF5jyOinttJyNr1yXpKv6ueoxsUZ/pub?gid=397555912&single=true&output=csv`,
   abril: `https://docs.google.com/spreadsheets/d/e/2PACX-1vS8XA4ddmXQF3tJcKew8WhY5Tr8LfjX1E2hkHWZG4u7w8ASutVxoF5jyOinttJyNr1yXpKv6ueoxsUZ/pub?gid=1499336465&single=true&output=csv`,
   mayo: `https://docs.google.com/spreadsheets/d/e/2PACX-1vS8XA4ddmXQF3tJcKew8WhY5Tr8LfjX1E2hkHWZG4u7w8ASutVxoF5jyOinttJyNr1yXpKv6ueoxsUZ/pub?gid=289433826&single=true&output=csv`,
-  junio: `https://docs.google.com/spreadsheets/d/e/2PACX-1vS8XA4ddmXQF3tJcKew8WhY5Tr8LfjX1E2hkHWZG4u7w8ASutVxoF5jyOinttJyNr1yXpKv6ueoxsUZ/pub?gid=632786864&single=true&output=csv`
+  junio: `https://docs.google.com/spreadsheets/d/e/2PACX-1vS8XA4ddmXQF3tJcKew8WhY5Tr8LfjX1E2hkHWZG4u7w8ASutVxoF5jyOinttJyNr1yXpKv6ueoxsUZ/pub?gid=632786864&single=true&output=csv&_cb=${timestamp}`
 };
 
 let allMonthsData = {};
@@ -92,46 +92,58 @@ function populateMonthSelector() {
 }
 
 async function preloadAllMonths() {
-  const CACHE_KEY = 'dashboard_data_v1';
-  const CACHE_TTL = 15 * 60 * 1000; // Caché de 15 minutos
-  const cached = localStorage.getItem(CACHE_KEY);
+  const monthKeys = Object.keys(MONTH_URLS);
+  const lastMonthKey = monthKeys[monthKeys.length - 1]; // Identifica el mes actual (ej: "junio")
 
-  // 1. Cargar desde memoria caché si existe y está vigente
-  if (cached) {
-    const { time, data } = JSON.parse(cached);
-    if (Date.now() - time < CACHE_TTL) {
-      allMonthsData = data;
-      loadDashboardData();
-      return;
-    }
+  const HISTORICAL_CACHE_KEY = 'dashboard_historical_months_v2';
+  let cachedHistorical = localStorage.getItem(HISTORICAL_CACHE_KEY);
+  let historicalData = cachedHistorical ? JSON.parse(cachedHistorical) : {};
+
+  // 1. Cargar meses antiguos solo si no están guardados en caché
+  const missingHistorical = monthKeys.filter(m => m !== lastMonthKey && !historicalData[m]);
+
+  if (missingHistorical.length > 0) {
+    const historicalPromises = missingHistorical.map(month => new Promise((resolve) => {
+      Papa.parse(MONTH_URLS[month], {
+        download: true,
+        header: true,
+        skipEmptyLines: 'greedy',
+        transformHeader: h => (h ? h.replace(/<[^>]*>/g, '').replace(/[\r\n]/g, '').trim() : ''),
+        complete: res => resolve({ 
+          month, 
+          data: (res.data || []).map(r => ({ ...r, _MES_ORIGEN: month })).filter(r => getRowValue(r, 'PROMOTOR') !== '') 
+        }),
+        error: () => resolve({ month, data: [] })
+      });
+    }));
+
+    const results = await Promise.all(historicalPromises);
+    results.forEach(res => { historicalData[res.month] = res.data; });
+    localStorage.setItem(HISTORICAL_CACHE_KEY, JSON.stringify(historicalData));
   }
 
-  // 2. Descarga directa en paralelo mediante PapaParse download
-  const monthKeys = Object.keys(MONTH_URLS);
-  const promises = monthKeys.map(month => new Promise((resolve) => {
-    Papa.parse(MONTH_URLS[month], {
+  // Asignar los meses históricos guardados
+  allMonthsData = { ...historicalData };
+
+  // 2. Descargar SIEMPRE el último mes en vivo evitando el caché del navegador
+  const freshUrl = `${MONTH_URLS[lastMonthKey]}&_cb=${Date.now()}`;
+
+  await new Promise((resolve) => {
+    Papa.parse(freshUrl, {
       download: true,
       header: true,
       skipEmptyLines: 'greedy',
       transformHeader: h => (h ? h.replace(/<[^>]*>/g, '').replace(/[\r\n]/g, '').trim() : ''),
-      complete: results => {
-        const validData = (results.data || [])
-          .map(row => ({ ...row, _MES_ORIGEN: month }))
-          .filter(row => getRowValue(row, 'PROMOTOR') !== '');
-        resolve({ month, data: validData });
+      complete: res => {
+        allMonthsData[lastMonthKey] = (res.data || [])
+          .map(r => ({ ...r, _MES_ORIGEN: lastMonthKey }))
+          .filter(r => getRowValue(r, 'PROMOTOR') !== '');
+        resolve();
       },
-      error: (err) => {
-        console.error(`Error cargando ${month}:`, err);
-        resolve({ month, data: [] });
-      }
+      error: () => resolve()
     });
-  }));
+  });
 
-  const results = await Promise.all(promises);
-  results.forEach(res => { allMonthsData[res.month] = res.data; });
-
-  // Guardar en caché local
-  localStorage.setItem(CACHE_KEY, JSON.stringify({ time: Date.now(), data: allMonthsData }));
   loadDashboardData();
 }
 
