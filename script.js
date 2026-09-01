@@ -876,35 +876,12 @@ function renderTrendsTable() {
     return;
   }
 
-  // 2. Renderizar recuadros por Agente filtrando meses vacíos
+  // 2. Renderizar un recuadro por Agente
   agentNames.forEach((agent, index) => {
     const info = agentsHistory[agent];
-    
-    const activeLabels = [];
-    const v1Data = [], v2Data = [], v3Data = [], v4Data = [], v5Data = [], metaData = [];
-
-    // Evaluar cada mes y filtrar los que no tienen actividad (ventas o meta)
-    monthKeys.forEach(m => {
-      const dataM = info.months[m] || { v1: 0, v2: 0, v3: 0, v4: 0, v5: 0, meta: 0 };
-      const totalVentas = dataM.v1 + dataM.v2 + dataM.v3 + dataM.v4 + dataM.v5;
-
-      // Solo incluye el mes si la meta > 0 o si hay al menos una venta
-      if (dataM.meta > 0 || totalVentas > 0) {
-        activeLabels.push(m.charAt(0).toUpperCase() + m.slice(1));
-        v1Data.push(dataM.v1);
-        v2Data.push(dataM.v2);
-        v3Data.push(dataM.v3);
-        v4Data.push(dataM.v4);
-        v5Data.push(dataM.v5);
-        metaData.push(dataM.meta);
-      }
-    });
-
-    // Si el agente no tiene meses con actividad real, se omite su recuadro
-    if (activeLabels.length === 0) return;
-
     const card = document.createElement('div');
     card.className = 'agent-trend-card';
+
     const canvasId = `chart-trend-agent-${index}`;
 
     card.innerHTML = `
@@ -921,19 +898,35 @@ function renderTrendsTable() {
 
     container.appendChild(card);
 
-    // 3. Crear el gráfico utilizando únicamente los meses activos
+    // Estructurar arreglos de datos por mes
+    const labels = monthKeys.map(m => m.charAt(0).toUpperCase() + m.slice(1));
+    const v1Data = [], v2Data = [], v3Data = [], v4Data = [], v5Data = [], metaData = [];
+
+    monthKeys.forEach(m => {
+      const dataM = info.months[m] || { v1: 0, v2: 0, v3: 0, v4: 0, v5: 0, meta: 0 };
+      v1Data.push(dataM.v1);
+      v2Data.push(dataM.v2);
+      v3Data.push(dataM.v3);
+      v4Data.push(dataM.v4);
+      v5Data.push(dataM.v5);
+      metaData.push(dataM.meta);
+    });
+
+    // 3. Crear el gráfico con 2 barras por grupo (stack 'ventas' y stack 'meta')
     const ctx = document.getElementById(canvasId)?.getContext('2d');
     if (ctx) {
       agentTrendsChartInstances[canvasId] = new Chart(ctx, {
         type: 'bar',
         data: {
-          labels: activeLabels,
+          labels: labels,
           datasets: [
+            // Barra 1 (Apilada con V1 - V5)
             { label: 'V1', data: v1Data, backgroundColor: '#3b82f6', stack: 'ventas' },
             { label: 'V2', data: v2Data, backgroundColor: '#60a5fa', stack: 'ventas' },
             { label: 'V3', data: v3Data, backgroundColor: '#93c5fd', stack: 'ventas' },
             { label: 'V4', data: v4Data, backgroundColor: '#bfdbfe', stack: 'ventas' },
             { label: 'V5', data: v5Data, backgroundColor: '#dbeafe', stack: 'ventas' },
+            // Barra 2 (Meta individual)
             { label: 'Meta', data: metaData, backgroundColor: '#ef4444', stack: 'meta' }
           ]
         },
@@ -1409,26 +1402,22 @@ function renderHeaderSummary() {
 }
 
 // ==========================================
-// 7. INICIALIZACIÓN CORREGIDA
+// 7. INICIALIZACIÓN
 // ==========================================
-document.addEventListener('DOMContentLoaded', async () => {
-  // 1. Poblar las opciones del selector de meses
+document.addEventListener('DOMContentLoaded', () => {
   populateMonthSelector();
   
-  // 2. Escuchar cambios en el input de búsqueda
   const searchInput = document.getElementById('filter-search');
   if (searchInput) {
     searchInput.addEventListener('input', filterData);
   }
 
-  // 3. Asignar listeners a select de mes y botón reset
   document.getElementById('filter-mes').addEventListener('change', loadDashboardData);
   document.getElementById('btn-reset').addEventListener('click', resetAllFilters);
   
-  // 4. Cargar los datos (esperar de forma asíncrona a que termine la petición)
-  await preloadAllMonths();
+  preloadAllMonths();
 
-  // 5. Polling automático cada 2 minutos (120,000 ms)
+  // Polling automático cada 2 minutos (120,000 ms) para recargar el mes en curso sin recargar la página
   setInterval(() => {
     fetchCurrentMonthData();
   }, 120000);
