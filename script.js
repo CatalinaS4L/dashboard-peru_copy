@@ -818,8 +818,6 @@ function renderGroupedTable(data, groupKey, selector, tableId) {
 
 let agentTrendsChartInstances = {};
 
-let agentTrendsChartInstances = {};
-
 function renderTrendsTable() {
   const container = document.getElementById('agent-trends-cards-container');
   if (!container) return;
