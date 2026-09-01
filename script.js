@@ -1409,22 +1409,26 @@ function renderHeaderSummary() {
 }
 
 // ==========================================
-// 7. INICIALIZACIÓN
+// 7. INICIALIZACIÓN CORREGIDA
 // ==========================================
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
+  // 1. Poblar las opciones del selector de meses
   populateMonthSelector();
   
+  // 2. Escuchar cambios en el input de búsqueda
   const searchInput = document.getElementById('filter-search');
   if (searchInput) {
     searchInput.addEventListener('input', filterData);
   }
 
+  // 3. Asignar listeners a select de mes y botón reset
   document.getElementById('filter-mes').addEventListener('change', loadDashboardData);
   document.getElementById('btn-reset').addEventListener('click', resetAllFilters);
   
-  preloadAllMonths();
+  // 4. Cargar los datos (esperar de forma asíncrona a que termine la petición)
+  await preloadAllMonths();
 
-  // Polling automático cada 2 minutos (120,000 ms) para recargar el mes en curso sin recargar la página
+  // 5. Polling automático cada 2 minutos (120,000 ms)
   setInterval(() => {
     fetchCurrentMonthData();
   }, 120000);
