@@ -210,29 +210,10 @@
         <button class="subtab-button" onclick="switchSubTab('trends-leader', event)">Por Líder</button>
       </div>
     
-      <!-- SUBTAB 1: Por Agente -->
+      <!-- SUBTAB 1: Por Agente (Recuadros/Tarjetas con Gráficos) -->
       <div id="subtab-trends-agent" class="subtab-content">
-        <div class="table-card">
-          <h2>Evolución Semanal de Ventas por Mes (General / Agentes)</h2>
-          <div class="table-wrapper">
-            <table id="trends-table">
-              <thead>
-                <tr>
-                  <th>Mes</th>
-                  <th>Total Agentes</th>
-                  <th>Meta Total</th>
-                  <th>V1</th>
-                  <th>V2</th>
-                  <th>V3</th>
-                  <th>V4</th>
-                  <th>V5</th>
-                  <th>Cierre Acumulado</th>
-                  <th>% Cumplimiento</th>
-                </tr>
-              </thead>
-              <tbody></tbody>
-            </table>
-          </div>
+        <div id="agent-trends-cards-container" class="agent-cards-grid">
+          <!-- Se generará dinámicamente mediante JS -->
         </div>
       </div>
     

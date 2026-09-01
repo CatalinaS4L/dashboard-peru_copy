@@ -816,69 +816,134 @@ function renderGroupedTable(data, groupKey, selector, tableId) {
   });
 }
 
-function renderTrendsTable() {
-  const tbody = document.querySelector('#trends-table tbody');
-  if (!tbody) return;
-  tbody.innerHTML = '';
+let agentTrendsChartInstances = {};
 
+function renderTrendsTable() {
+  const container = document.getElementById('agent-trends-cards-container');
+  if (!container) return;
+  
+  // Limpiar instancias de gráficos anteriores
+  Object.values(agentTrendsChartInstances).forEach(chart => chart.destroy());
+  agentTrendsChartInstances = {};
+  container.innerHTML = '';
+
+  const searchVal = document.getElementById('filter-search')?.value.toLowerCase().trim() || '';
+  const trainerVal = document.getElementById('filter-trainer')?.value;
+  const supervisorVal = document.getElementById('filter-supervisor')?.value;
+  const coordinadorVal = document.getElementById('filter-coordinador')?.value;
+  const statusVal = document.getElementById('filter-status')?.value;
+
+  // 1. Agrupar la información histórica por cada Agente
+  const agentsHistory = {};
   const monthKeys = Object.keys(allMonthsData);
-  if (monthKeys.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;">No hay datos disponibles para comparar.</td></tr>';
-    return;
-  }
 
   monthKeys.forEach(monthKey => {
     const monthData = allMonthsData[monthKey] || [];
     
-    const searchVal = document.getElementById('filter-search')?.value.toLowerCase().trim() || '';
-    const trainerVal = document.getElementById('filter-trainer')?.value;
-    const supervisorVal = document.getElementById('filter-supervisor')?.value;
-    const coordinadorVal = document.getElementById('filter-coordinador')?.value;
-    const statusVal = document.getElementById('filter-status')?.value;
+    monthData.forEach(row => {
+      const agent = getRowValue(row, 'PROMOTOR');
+      if (!agent) return;
 
-    const filteredMonthData = monthData.filter(item => {
-      const agentName = getRowValue(item, 'PROMOTOR').toLowerCase();
-      const matchSearch = !searchVal || agentName.includes(searchVal);
-      const matchTrainer = !trainerVal || getRowValue(item, 'TRAINER') === trainerVal;
-      const matchSupervisor = !supervisorVal || getRowValue(item, 'SUPERVISOR') === supervisorVal;
-      const matchCoordinador = !coordinadorVal || getRowValue(item, 'COORDINADOR') === coordinadorVal;
-      const matchStatus = !statusVal || getRowValue(item, 'STATUS AGENTE') === statusVal;
-      return matchSearch && matchTrainer && matchSupervisor && matchCoordinador && matchStatus;
+      const matchSearch = !searchVal || agent.toLowerCase().includes(searchVal);
+      const matchTrainer = !trainerVal || getRowValue(row, 'TRAINER') === trainerVal;
+      const matchSupervisor = !supervisorVal || getRowValue(row, 'SUPERVISOR') === supervisorVal;
+      const matchCoordinador = !coordinadorVal || getRowValue(row, 'COORDINADOR') === coordinadorVal;
+      const matchStatus = !statusVal || getRowValue(row, 'STATUS AGENTE') === statusVal;
+
+      if (matchSearch && matchTrainer && matchSupervisor && matchCoordinador && matchStatus) {
+        if (!agentsHistory[agent]) {
+          agentsHistory[agent] = {
+            trainer: getRowValue(row, 'TRAINER') || '-',
+            supervisor: getRowValue(row, 'SUPERVISOR') || '-',
+            months: {}
+          };
+        }
+        agentsHistory[agent].months[monthKey] = {
+          v1: parseNum(getRowValue(row, 'V1')),
+          v2: parseNum(getRowValue(row, 'V2')),
+          v3: parseNum(getRowValue(row, 'V3')),
+          v4: parseNum(getRowValue(row, 'V4')),
+          v5: parseNum(getRowValue(row, 'V5')),
+          meta: parseNum(getRowValue(row, 'META'))
+        };
+      }
     });
+  });
 
-    let agentsCount = filteredMonthData.length;
-    let metaTotal = 0;
-    let v1 = 0, v2 = 0, v3 = 0, v4 = 0, v5 = 0;
-    let cierre = 0;
+  const agentNames = Object.keys(agentsHistory);
+  if (agentNames.length === 0) {
+    container.innerHTML = '<div class="table-card" style="text-align:center; width: 100%;">No hay datos disponibles para los filtros seleccionados.</div>';
+    return;
+  }
 
-    filteredMonthData.forEach(row => {
-      metaTotal += parseNum(getRowValue(row, 'META'));
-      v1 += parseNum(getRowValue(row, 'V1'));
-      v2 += parseNum(getRowValue(row, 'V2'));
-      v3 += parseNum(getRowValue(row, 'V3'));
-      v4 += parseNum(getRowValue(row, 'V4'));
-      v5 += parseNum(getRowValue(row, 'V5'));
-      cierre += parseNum(getRowValue(row, 'CIERRE'));
-    });
+  // 2. Renderizar un recuadro por Agente
+  agentNames.forEach((agent, index) => {
+    const info = agentsHistory[agent];
+    const card = document.createElement('div');
+    card.className = 'agent-trend-card';
 
-    const compliancePct = metaTotal > 0 ? ((cierre / metaTotal) * 100) : 0;
-    const complianceHTML = getComplianceBadge(compliancePct.toString());
-    const monthFormatted = monthKey.charAt(0).toUpperCase() + monthKey.slice(1);
+    const canvasId = `chart-trend-agent-${index}`;
 
-    const tr = document.createElement('tr');
-    tr.innerHTML = `
-      <td><strong>${monthFormatted} 2026</strong></td>
-      <td>${agentsCount}</td>
-      <td>${metaTotal}</td>
-      <td>${v1}</td>
-      <td>${v2}</td>
-      <td>${v3}</td>
-      <td>${v4}</td>
-      <td>${v5}</td>
-      <td><strong>${cierre}</strong></td>
-      <td>${complianceHTML}</td>
+    card.innerHTML = `
+      <div class="agent-trend-header">
+        <h3>${agent}</h3>
+        <p style="font-size: 0.8rem; color: #64748b; margin-top: 2px;">
+          <strong>Supervisor:</strong> ${info.supervisor} | <strong>Trainer:</strong> ${info.trainer}
+        </p>
+      </div>
+      <div class="agent-chart-container">
+        <canvas id="${canvasId}"></canvas>
+      </div>
     `;
-    tbody.appendChild(tr);
+
+    container.appendChild(card);
+
+    // Estructurar arreglos de datos por mes
+    const labels = monthKeys.map(m => m.charAt(0).toUpperCase() + m.slice(1));
+    const v1Data = [], v2Data = [], v3Data = [], v4Data = [], v5Data = [], metaData = [];
+
+    monthKeys.forEach(m => {
+      const dataM = info.months[m] || { v1: 0, v2: 0, v3: 0, v4: 0, v5: 0, meta: 0 };
+      v1Data.push(dataM.v1);
+      v2Data.push(dataM.v2);
+      v3Data.push(dataM.v3);
+      v4Data.push(dataM.v4);
+      v5Data.push(dataM.v5);
+      metaData.push(dataM.meta);
+    });
+
+    // 3. Crear el gráfico con 2 barras por grupo (stack 'ventas' y stack 'meta')
+    const ctx = document.getElementById(canvasId)?.getContext('2d');
+    if (ctx) {
+      agentTrendsChartInstances[canvasId] = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: labels,
+          datasets: [
+            // Barra 1 (Apilada con V1 - V5)
+            { label: 'V1', data: v1Data, backgroundColor: '#3b82f6', stack: 'ventas' },
+            { label: 'V2', data: v2Data, backgroundColor: '#60a5fa', stack: 'ventas' },
+            { label: 'V3', data: v3Data, backgroundColor: '#93c5fd', stack: 'ventas' },
+            { label: 'V4', data: v4Data, backgroundColor: '#bfdbfe', stack: 'ventas' },
+            { label: 'V5', data: v5Data, backgroundColor: '#dbeafe', stack: 'ventas' },
+            // Barra 2 (Meta individual)
+            { label: 'Meta', data: metaData, backgroundColor: '#ef4444', stack: 'meta' }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 10 } } },
+            tooltip: { mode: 'index', intersect: false }
+          },
+          scales: {
+            x: { stacked: true },
+            y: { stacked: true, beginAtZero: true }
+          }
+        }
+      });
+    }
   });
 }
 

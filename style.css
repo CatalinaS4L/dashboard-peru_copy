@@ -401,3 +401,35 @@ th:hover {
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
 }
 
+/* Grid para Tarjetas de Tendencias por Agente */
+.agent-cards-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(380px, 1fr));
+  gap: 20px;
+}
+
+.agent-trend-card {
+  background: #ffffff;
+  border-radius: 8px;
+  padding: 16px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+  border: 1px solid #e2e8f0;
+}
+
+.agent-trend-header {
+  border-bottom: 2px solid #06b706;
+  padding-bottom: 8px;
+  margin-bottom: 12px;
+}
+
+.agent-trend-header h3 {
+  font-size: 1.1rem;
+  color: #2c3e50;
+}
+
+.agent-chart-container {
+  position: relative;
+  height: 250px;
+  width: 100%;
+}
+
