@@ -124,7 +124,7 @@ async function preloadAllMonths() {
   let cachedHistorical = localStorage.getItem(HISTORICAL_CACHE_KEY);
   let historicalData = cachedHistorical ? JSON.parse(cachedHistorical) : {};
 
-  // 1. Cargar meses antiguos solo si no están guardados en caché
+  // Cargar meses antiguos solo si no están guardados en caché
   const missingHistorical = monthKeys.filter(m => m !== lastMonthKey && !historicalData[m]);
 
   if (missingHistorical.length > 0) {
@@ -150,7 +150,7 @@ async function preloadAllMonths() {
   // Asignar los meses históricos guardados
   allMonthsData = { ...historicalData };
 
-  // 2. Descargar en vivo el mes actual
+  // Descargar en vivo el mes actual
   await fetchCurrentMonthData();
 }
 
@@ -176,7 +176,6 @@ function loadDashboardData() {
       .map(m => {
         const nameFormatted = m.charAt(0).toUpperCase() + m.slice(1);
         if (m === currentRowMonth) {
-          // Envuelve el mes actual con el recuadro destacado
           return `<span class="active-month-badge">${nameFormatted}</span>`;
         }
         return nameFormatted;
@@ -199,7 +198,6 @@ function loadDashboardData() {
 }
 
 function renderAllTables() {
-
   renderHeaderSummary();
 
   if (sortState['agents-table'].column) {
@@ -318,8 +316,6 @@ function resetAllFilters() {
   onlyConsistentGreen = false;
   onlyRegularPerformers = false;
   updateFilterButtonsUI();
-  document.getElementById('btn-critical-risk')?.classList.remove('active');
-  document.getElementById('btn-consistent-green')?.classList.remove('active');
 
   Object.keys(sortState).forEach(tableId => {
     sortState[tableId] = { column: null, isAsc: true };
@@ -379,6 +375,7 @@ function switchTab(tabName, evt) {
   if (tabName !== 'focus') {
     if (onlyCriticalRisk) toggleCriticalRiskFilter();
     if (onlyConsistentGreen) toggleConsistentGreenFilter();
+    if (onlyRegularPerformers) toggleRegularPerformersFilter();
   }
   
   document.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
@@ -408,7 +405,6 @@ function switchTab(tabName, evt) {
     tabSessions.style.display = 'block';
     renderTrainerSessions(filteredData);
   }
-  
   if (tabName === 'diagnostic' && tabDiagnostic) {
     tabDiagnostic.style.display = 'block';
     renderDiagnosticTable(filteredData);
@@ -534,7 +530,7 @@ function renderTable(data) {
   });
 }
 
-// TABLA FOCO: Matriz por Agente con Cierre, Cumpl. % por Mes, Gráficos y Ordenamiento Completo
+// TABLA FOCO: Matriz por Agente
 function renderFocusTable(data) {
   const table = document.getElementById('focus-table');
   if (!table) return;
@@ -557,7 +553,6 @@ function renderFocusTable(data) {
 
   const currentSort = sortState['focus-table'] || { column: null, isAsc: true };
 
-  // Construcción dinámica de la cabecera con eventos de click para ordenar
   let headerHTML = `<tr><th onclick="handleSort('focus-table', 'PROMOTOR')" style="cursor:pointer;">Agente</th>`;
   monthsToDisplay.forEach(m => {
     const mesFormatted = m.charAt(0).toUpperCase() + m.slice(1);
@@ -570,7 +565,6 @@ function renderFocusTable(data) {
   headerHTML += '<th style="text-align:center; min-width: 180px;">Gráfico de Performance</th></tr>';
   thead.innerHTML = headerHTML;
 
-  // 1. Mapear todo el historial por promotor
   const fullAgentsMap = {};
   Object.keys(allMonthsData).forEach(m => {
     allMonthsData[m].forEach(row => {
@@ -587,7 +581,6 @@ function renderFocusTable(data) {
     });
   });
 
-  // 2. Agrupar datos según la selección actual
   const agentsMap = {};
   data.forEach(row => {
     const agentName = getRowValue(row, 'PROMOTOR');
@@ -600,7 +593,6 @@ function renderFocusTable(data) {
 
   let agentsList = Object.values(agentsMap);
 
-  // 3. Aplicar Filtros RÁPIDOS
   if (onlyCriticalRisk) {
     agentsList = agentsList.filter(agent => hasThreeConsecutiveLowMonths(agent.monthsData));
   } else if (onlyConsistentGreen) {
@@ -626,7 +618,6 @@ function renderFocusTable(data) {
     return;
   }
 
-  // 4. Lógica de Ordenamiento por Agente, Cierre o Cumplimiento
   if (currentSort.column) {
     const colKey = currentSort.column;
     const isAsc = currentSort.isAsc;
@@ -653,7 +644,6 @@ function renderFocusTable(data) {
     });
   }
 
-  // 5. Renderizado
   agentsList.forEach((agent, index) => {
     const tr = document.createElement('tr');
     let rowHTML = `<td><strong>${agent.agentName}</strong></td>`;
@@ -824,7 +814,6 @@ function renderTrendsTable() {
   const container = document.getElementById('agent-trends-cards-container');
   if (!container) return;
   
-  // Limpiar instancias de gráficos anteriores
   Object.values(agentTrendsChartInstances).forEach(chart => chart.destroy());
   agentTrendsChartInstances = {};
   container.innerHTML = '';
@@ -835,7 +824,6 @@ function renderTrendsTable() {
   const coordinadorVal = document.getElementById('filter-coordinador')?.value;
   const statusVal = document.getElementById('filter-status')?.value;
 
-  // 1. Agrupar la información histórica por cada Agente
   const agentsHistory = {};
   const monthKeys = Object.keys(allMonthsData);
 
@@ -878,7 +866,6 @@ function renderTrendsTable() {
     return;
   }
 
-  // 2. Renderizar un recuadro por Agente
   agentNames.forEach((agent, index) => {
     const info = agentsHistory[agent];
     const card = document.createElement('div');
@@ -900,7 +887,6 @@ function renderTrendsTable() {
 
     container.appendChild(card);
 
-    // Estructurar arreglos de datos por mes
     const labels = monthKeys.map(m => m.charAt(0).toUpperCase() + m.slice(1));
     const v1Data = [], v2Data = [], v3Data = [], v4Data = [], v5Data = [], metaData = [];
 
@@ -914,7 +900,6 @@ function renderTrendsTable() {
       metaData.push(dataM.meta);
     });
 
-    // 3. Crear el gráfico con 2 barras por grupo (stack 'ventas' y stack 'meta')
     const ctx = document.getElementById(canvasId)?.getContext('2d');
     if (ctx) {
       agentTrendsChartInstances[canvasId] = new Chart(ctx, {
@@ -922,13 +907,11 @@ function renderTrendsTable() {
         data: {
           labels: labels,
           datasets: [
-            // Barra 1 (Apilada con V1 - V5)
             { label: 'V1', data: v1Data, backgroundColor: '#3b82f6', stack: 'ventas' },
             { label: 'V2', data: v2Data, backgroundColor: '#60a5fa', stack: 'ventas' },
             { label: 'V3', data: v3Data, backgroundColor: '#93c5fd', stack: 'ventas' },
             { label: 'V4', data: v4Data, backgroundColor: '#bfdbfe', stack: 'ventas' },
             { label: 'V5', data: v5Data, backgroundColor: '#dbeafe', stack: 'ventas' },
-            // Barra 2 (Meta individual)
             { label: 'Meta', data: metaData, backgroundColor: '#ef4444', stack: 'meta' }
           ]
         },
@@ -1244,87 +1227,61 @@ function switchSubTab(subTabName, evt) {
 }
 
 function renderTrendsLeaderTable() {
-  const tbody = document.querySelector('#trends-leader-table tbody');
-  if (!tbody) return;
-  tbody.innerHTML = '';
+  const container = document.getElementById('subtab-por-lider');
+  if (!container) return;
 
   const monthKeys = Object.keys(allMonthsData);
-  if (monthKeys.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="12" style="text-align:center;">No hay datos disponibles.</td></tr>';
-    return;
-  }
+  if (monthKeys.length === 0) return;
 
-  const searchVal = document.getElementById('filter-search')?.value.toLowerCase().trim() || '';
-  const trainerVal = document.getElementById('filter-trainer')?.value;
-  const supervisorVal = document.getElementById('filter-supervisor')?.value;
-  const coordinadorVal = document.getElementById('filter-coordinador')?.value;
-  const statusVal = document.getElementById('filter-status')?.value;
+  const labels = monthKeys.map(m => m.charAt(0).toUpperCase() + m.slice(1));
+  const supervisorsMap = {};
 
-  let hasData = false;
-
-  monthKeys.forEach(monthKey => {
-    const monthData = allMonthsData[monthKey] || [];
-    
-    const filteredMonthData = monthData.filter(item => {
-      const agentName = getRowValue(item, 'PROMOTOR').toLowerCase();
-      const matchSearch = !searchVal || agentName.includes(searchVal);
-      const matchTrainer = !trainerVal || getRowValue(item, 'TRAINER') === trainerVal;
-      const matchSupervisor = !supervisorVal || getRowValue(item, 'SUPERVISOR') === supervisorVal;
-      const matchCoordinador = !coordinadorVal || getRowValue(item, 'COORDINADOR') === coordinadorVal;
-      const matchStatus = !statusVal || getRowValue(item, 'STATUS AGENTE') === statusVal;
-      return matchSearch && matchTrainer && matchSupervisor && matchCoordinador && matchStatus;
-    });
-
-    if (filteredMonthData.length === 0) return;
-
-    const leaderMap = {};
-    filteredMonthData.forEach(row => {
-      const sup = getRowValue(row, 'SUPERVISOR') || 'Sin Supervisor';
-      if (!leaderMap[sup]) {
-        leaderMap[sup] = {
-          leader: sup,
-          role: 'Supervisor',
-          count: 0, meta: 0, v1: 0, v2: 0, v3: 0, v4: 0, v5: 0, cierre: 0
-        };
+  monthKeys.forEach(m => {
+    (allMonthsData[m] || []).forEach(row => {
+      const sup = getRowValue(row, 'SUPERVISOR');
+      if (sup && !supervisorsMap[sup]) {
+        supervisorsMap[sup] = {};
       }
-      leaderMap[sup].count++;
-      leaderMap[sup].meta += parseNum(getRowValue(row, 'META'));
-      leaderMap[sup].v1 += parseNum(getRowValue(row, 'V1'));
-      leaderMap[sup].v2 += parseNum(getRowValue(row, 'V2'));
-      leaderMap[sup].v3 += parseNum(getRowValue(row, 'V3'));
-      leaderMap[sup].v4 += parseNum(getRowValue(row, 'V4'));
-      leaderMap[sup].v5 += parseNum(getRowValue(row, 'V5'));
-      leaderMap[sup].cierre += parseNum(getRowValue(row, 'CIERRE'));
-    });
-
-    const monthFormatted = monthKey.charAt(0).toUpperCase() + monthKey.slice(1);
-
-    Object.values(leaderMap).forEach(l => {
-      hasData = true;
-      const pct = l.meta > 0 ? (l.cierre / l.meta) * 100 : 0;
-      const complianceHTML = getComplianceBadge(pct.toString());
-
-      const tr = document.createElement('tr');
-      tr.innerHTML = `
-        <td><strong>${monthFormatted} 2026</strong></td>
-        <td><strong>${l.leader}</strong></td>
-        <td><span style="font-size: 0.8em; background: #e0f2fe; color: #0369a1; padding: 2px 6px; border-radius: 4px;">${l.role}</span></td>
-        <td>${l.count}</td>
-        <td>${l.meta}</td>
-        <td>${l.v1}</td>
-        <td>${l.v2}</td>
-        <td>${l.v3}</td>
-        <td>${l.v4}</td>
-        <td>${l.v5}</td>
-        <td><strong>${l.cierre}</strong></td>
-        <td>${complianceHTML}</td>
-      `;
-      tbody.appendChild(tr);
     });
   });
 
-  if (!hasData) {
-    tbody.innerHTML = '<tr><td colspan="12" style="text-align:center;">No hay datos disponibles para los filtros seleccionados.</td></tr>';
+  Object.keys(supervisorsMap).forEach(sup => {
+    monthKeys.forEach(m => {
+      const rows = (allMonthsData[m] || []).filter(r => getRowValue(r, 'SUPERVISOR') === sup);
+      const totalCierre = rows.reduce((sum, r) => sum + parseNum(getRowValue(r, 'CIERRE')), 0);
+      supervisorsMap[sup][m] = totalCierre;
+    });
+  });
+
+  const colors = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#14b8a6'];
+  const datasets = Object.keys(supervisorsMap).map((sup, idx) => ({
+    label: sup,
+    data: monthKeys.map(m => supervisorsMap[sup][m] || 0),
+    borderColor: colors[idx % colors.length],
+    backgroundColor: colors[idx % colors.length],
+    fill: false,
+    tension: 0.1
+  }));
+
+  let canvas = document.getElementById('chartAgentesPorLider');
+  if (canvas) {
+    let existingChart = Chart.getChart(canvas);
+    if (existingChart) existingChart.destroy();
+
+    new Chart(canvas.getContext('2d'), {
+      type: 'line',
+      data: { labels, datasets },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { position: 'bottom' }
+        },
+        scales: {
+          y: { beginAtZero: true }
+        }
+      }
+    });
   }
 }
 
@@ -1419,7 +1376,7 @@ document.addEventListener('DOMContentLoaded', () => {
   
   preloadAllMonths();
 
-  // Polling automático cada 2 minutos (120,000 ms) para recargar el mes en curso sin recargar la página
+  // Recarga automática en segundo plano cada 2 minutos
   setInterval(() => {
     fetchCurrentMonthData();
   }, 120000);
