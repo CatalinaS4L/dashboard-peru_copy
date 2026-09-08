@@ -1100,10 +1100,15 @@ function renderDiagnosticTable(data) {
   if (!tbody) return;
   tbody.innerHTML = '';
 
+  // 1. Si no hay datos, renderizar gráfico vacío/destruir instancia y salir
   if (!data || data.length === 0) {
+    renderQualityScatterPlot([]); 
     tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;">No hay datos disponibles.</td></tr>';
     return;
   }
+
+  // 2. Renderizar el gráfico con los datos que llegaron
+  renderQualityScatterPlot(data);
 
   const columns = [
     'NOTA HABILIDADES COMUNICATIVAS',
@@ -1445,3 +1450,75 @@ document.addEventListener('DOMContentLoaded', () => {
     fetchCurrentMonthData();
   }, 120000);
 });
+
+let scatterChartInstance = null;
+
+function renderQualityScatterPlot(data) {
+  const canvas = document.getElementById('chartQualityVsPerformance');
+  if (!canvas) return;
+
+  // Filtrar solo filas que tengan Nota Final y Cumplimiento válido
+  const validData = data.filter(row => {
+    const nota = getRowValue(row, 'NOTA FINAL');
+    const cumpl = getRowValue(row, 'CUMPLIMIENTO MES');
+    return nota && nota !== '-' && cumpl && cumpl !== '-';
+  });
+
+  if (validData.length === 0) {
+    if (scatterChartInstance) scatterChartInstance.destroy();
+    return;
+  }
+
+  // Mapear datos a puntos {x, y, agent}
+  const scatterPoints = validData.map(row => ({
+    x: parseNum(getRowValue(row, 'NOTA FINAL')),
+    y: parseNum(getRowValue(row, 'CUMPLIMIENTO MES')),
+    agent: getRowValue(row, 'PROMOTOR') || 'Agente'
+  }));
+
+  if (scatterChartInstance) {
+    scatterChartInstance.destroy();
+  }
+
+  const ctx = canvas.getContext('2d');
+  scatterChartInstance = new Chart(ctx, {
+    type: 'scatter',
+    data: {
+      datasets: [{
+        label: 'Agentes',
+        data: scatterPoints,
+        backgroundColor: 'rgba(37, 99, 235, 0.7)', // Azul primario
+        borderColor: '#1d4ed8',
+        borderWidth: 1,
+        pointRadius: 6,
+        pointHoverRadius: 9
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            label: (context) => {
+              const pt = context.raw;
+              return `${pt.agent}: Calidad = ${pt.x}% | Cumplimiento = ${pt.y}%`;
+            }
+          }
+        }
+      },
+      scales: {
+        x: {
+          title: { display: true, text: 'Nota Final de Calidad (%)', font: { weight: 'bold' } },
+          min: 0,
+          max: 100
+        },
+        y: {
+          title: { display: true, text: '% Cumplimiento de Meta', font: { weight: 'bold' } },
+          beginAtZero: true
+        }
+      }
+    }
+  });
+}
