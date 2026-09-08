@@ -1218,31 +1218,39 @@ function renderTrendsLeaderTable() {
   if (monthKeys.length === 0) return;
 
   const labels = monthKeys.map(m => m.charAt(0).toUpperCase() + m.slice(1));
-  const supervisorsMap = {};
+  const supervisorsVentasMap = {};
+  const supervisorsPromotoresMap = {};
 
   monthKeys.forEach(m => {
     (allMonthsData[m] || []).forEach(row => {
       const sup = getRowValue(row, 'SUPERVISOR');
-      if (sup && !supervisorsMap[sup]) {
-        supervisorsMap[sup] = {};
+      if (sup) {
+        if (!supervisorsVentasMap[sup]) supervisorsVentasMap[sup] = {};
+        if (!supervisorsPromotoresMap[sup]) supervisorsPromotoresMap[sup] = {};
       }
     });
   });
 
-  Object.keys(supervisorsMap).forEach(sup => {
+  Object.keys(supervisorsVentasMap).forEach(sup => {
     monthKeys.forEach(m => {
       const rows = (allMonthsData[m] || []).filter(r => getRowValue(r, 'SUPERVISOR') === sup);
+      
+      // Total Ventas (Cierre)
       const totalCierre = rows.reduce((sum, r) => sum + parseNum(getRowValue(r, 'CIERRE')), 0);
-      supervisorsMap[sup][m] = totalCierre;
+      supervisorsVentasMap[sup][m] = totalCierre;
+
+      // Cantidad de Promotores Únicos
+      const uniquePromotores = new Set(rows.map(r => getRowValue(r, 'PROMOTOR')).filter(Boolean));
+      supervisorsPromotoresMap[sup][m] = uniquePromotores.size;
     });
   });
 
-  // Generación de datasets en formato Barras Agrupadas con Colores Únicos
-  const datasets = Object.keys(supervisorsMap).map((sup, idx) => {
+  // Datasets para Ventas
+  const datasetsVentas = Object.keys(supervisorsVentasMap).map((sup, idx) => {
     const color = SUPERVISOR_COLORS[idx % SUPERVISOR_COLORS.length];
     return {
       label: sup,
-      data: monthKeys.map(m => supervisorsMap[sup][m] || 0),
+      data: monthKeys.map(m => supervisorsVentasMap[sup][m] || 0),
       backgroundColor: color,
       borderColor: color,
       borderWidth: 1,
@@ -1250,14 +1258,69 @@ function renderTrendsLeaderTable() {
     };
   });
 
-  let canvas = document.getElementById('chartAgentesPorLider');
-  if (canvas) {
-    let existingChart = Chart.getChart(canvas);
-    if (existingChart) existingChart.destroy();
+  // Datasets para Promotores
+  const datasetsPromotores = Object.keys(supervisorsPromotoresMap).map((sup, idx) => {
+    const color = SUPERVISOR_COLORS[idx % SUPERVISOR_COLORS.length];
+    return {
+      label: sup,
+      data: monthKeys.map(m => supervisorsPromotoresMap[sup][m] || 0),
+      backgroundColor: color,
+      borderColor: color,
+      borderWidth: 1,
+      borderRadius: 4
+    };
+  });
 
-    new Chart(canvas.getContext('2d'), {
+  // 1. Renderizar Gráfico de Promotores por Supervisor
+  let canvasPromotores = document.getElementById('chartPromotoresPorLider');
+  if (canvasPromotores) {
+    let existingChartProm = Chart.getChart(canvasPromotores);
+    if (existingChartProm) existingChartProm.destroy();
+
+    new Chart(canvasPromotores.getContext('2d'), {
       type: 'bar',
-      data: { labels, datasets },
+      data: { labels, datasets: datasetsPromotores },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          title: {
+            display: true,
+            text: 'Cantidad de Promotores Asignados por Supervisor y por Mes',
+            font: { size: 16, weight: 'bold' },
+            color: '#2c3e50',
+            padding: { top: 10, bottom: 20 }
+          },
+          legend: { 
+            position: 'bottom',
+            labels: { boxWidth: 12, padding: 15 }
+          },
+          tooltip: {
+            mode: 'index',
+            intersect: false
+          }
+        },
+        scales: {
+          x: { grid: { display: false } },
+          y: { 
+            beginAtZero: true,
+            ticks: { stepSize: 1 },
+            title: { display: true, text: 'Cantidad de Promotores' }
+          }
+        }
+      }
+    });
+  }
+
+  // 2. Renderizar Gráfico de Ventas por Supervisor
+  let canvasVentas = document.getElementById('chartAgentesPorLider');
+  if (canvasVentas) {
+    let existingChartVentas = Chart.getChart(canvasVentas);
+    if (existingChartVentas) existingChartVentas.destroy();
+
+    new Chart(canvasVentas.getContext('2d'), {
+      type: 'bar',
+      data: { labels, datasets: datasetsVentas },
       options: {
         responsive: true,
         maintainAspectRatio: false,
@@ -1279,9 +1342,7 @@ function renderTrendsLeaderTable() {
           }
         },
         scales: {
-          x: { 
-            grid: { display: false } 
-          },
+          x: { grid: { display: false } },
           y: { 
             beginAtZero: true,
             title: { display: true, text: 'Ventas Totales' }
