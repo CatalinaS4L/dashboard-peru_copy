@@ -8,7 +8,7 @@
   <!-- Estilos propios -->
   <link rel="stylesheet" href="style.css">
   
-  <!-- Librerías externas: PapaParse (para leer CSV) y Chart.js (para gráficos) -->
+  <!-- Librerías externas: PapaParse y Chart.js -->
   <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
@@ -126,7 +126,7 @@
       </div>
     </section>
 
-    <!-- TAB FOCO: Foco Rendimiento por Agente (Matriz por Meses) -->
+    <!-- TAB FOCO: Foco Rendimiento por Agente -->
     <section id="tab-focus" class="table-card tab-content" style="display: none;">
       <div class="table-header-flex">
         <h2>Foco Rendimiento por Agente</h2>
@@ -150,9 +150,8 @@
       </div>
     </section>
 
-    <!-- 4. TAB 2: Acumulativos por Líder (Supervisor y Coordinador) -->
+    <!-- 4. TAB 2: Acumulativos por Líder -->
     <section id="tab-leaders" class="tab-content" style="display: none;">
-      <!-- Tabla por Supervisor -->
       <div class="table-card" style="margin-bottom: 25px;">
         <h2>Acumulativo por Supervisor</h2>
         <div class="table-wrapper">
@@ -176,7 +175,6 @@
         </div>
       </div>
 
-      <!-- Tabla por Coordinador -->
       <div class="table-card">
         <h2>Acumulativo por Coordinador</h2>
         <div class="table-wrapper">
@@ -203,33 +201,27 @@
 
     <!-- 5. TAB 3: Tendencias Semanales -->
     <section id="tab-trends" class="tab-content" style="display: none;">
-      
-      <!-- Navegación de Subpestañas -->
       <div class="subtabs-container" style="margin-bottom: 15px; display: flex; gap: 8px;">
         <button class="subtab-button active" onclick="switchSubTab('trends-agent', event)">Por Agente</button>
         <button class="subtab-button" onclick="switchSubTab('trends-leader', event)">Por Líder</button>
       </div>
     
-      <!-- SUBTAB 1: Por Agente -->
       <div id="subtab-trends-agent" class="subtab-content">
-        <div id="agent-trends-cards-container" class="agent-cards-grid">
-          <!-- Se generará dinámicamente mediante JS -->
-        </div>
+        <div id="agent-trends-cards-container" class="agent-cards-grid"></div>
       </div>
     
-      <!-- SUBTAB 2: Por Líder (ID Corregido) -->
       <div id="subtab-trends-leader" class="subtab-content" style="display: none;">
-        <div style="position: relative; width: 100%; height: 400px; max-width: 900px; margin: 0 auto;">
-          <canvas id="chartAgentesPorLider"></canvas>
+        <div class="chart-card">
+          <div class="chart-wrapper">
+            <canvas id="chartAgentesPorLider"></canvas>
+          </div>
         </div>
       </div>
     </section>
 
     <!-- TAB 4: Sesiones Trainer -->
     <section id="tab-sessions" class="tab-content" style="display: none;">
-      <div id="trainer-sessions-container" class="sessions-cards-grid">
-        <!-- Se genera dinámicamente mediante JS -->
-      </div>
+      <div id="trainer-sessions-container" class="sessions-cards-grid"></div>
     </section>
 
     <!-- TAB 5: Monitoreo Diagnóstico -->

@@ -11,6 +11,13 @@ const MONTH_URLS = {
   agosto: `https://docs.google.com/spreadsheets/d/e/2PACX-1vS8XA4ddmXQF3tJcKew8WhY5Tr8LfjX1E2hkHWZG4u7w8ASutVxoF5jyOinttJyNr1yXpKv6ueoxsUZ/pub?gid=1822972942&single=true&output=csv`
 };
 
+// Paleta de colores únicos para supervisores
+const SUPERVISOR_COLORS = [
+  '#2563eb', '#10b981', '#f59e0b', '#ef4444', 
+  '#8b5cf6', '#ec4899', '#06b6d4', '#84cc16', 
+  '#f97316', '#6366f1', '#14b8a6', '#d97706'
+];
+
 let allMonthsData = {};
 let rawData = [];
 let filteredData = [];
@@ -668,7 +675,7 @@ function renderFocusTable(data) {
           datasets: [{
             label: 'Cierre',
             data: chartData,
-            backgroundColor: '#3498db',
+            backgroundColor: '#2563eb',
             borderRadius: 4,
             maxBarThickness: 15
           }]
@@ -1012,14 +1019,14 @@ function renderTrainerSessions(data) {
     `).join('');
 
     card.innerHTML = `
-      <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #3498db; padding-bottom: 8px; margin-bottom: 12px;">
+      <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #06b706; padding-bottom: 8px; margin-bottom: 12px;">
         <div>
           <h3 style="margin: 0; color: #2c3e50; display: inline-block; margin-right: 10px;">${info.agentName}</h3>
           <span style="background: #2c3e50; color: #fff; font-size: 0.78em; padding: 3px 8px; border-radius: 12px; font-weight: bold; vertical-align: middle;">
             📅 ${info.mesLabel}
           </span>
         </div>
-        <span style="font-size: 0.85em; background: #e8f4fc; color: #2980b9; padding: 4px 8px; border-radius: 4px; font-weight: bold;">
+        <span style="font-size: 0.85em; background: #e8f4fc; color: #2563eb; padding: 4px 8px; border-radius: 4px; font-weight: bold;">
           Status: ${info.status}
         </span>
       </div>
@@ -1230,15 +1237,18 @@ function renderTrendsLeaderTable() {
     });
   });
 
-  const colors = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#14b8a6'];
-  const datasets = Object.keys(supervisorsMap).map((sup, idx) => ({
-    label: sup,
-    data: monthKeys.map(m => supervisorsMap[sup][m] || 0),
-    borderColor: colors[idx % colors.length],
-    backgroundColor: colors[idx % colors.length],
-    fill: false,
-    tension: 0.1
-  }));
+  // Generación de datasets en formato Barras Agrupadas con Colores Únicos
+  const datasets = Object.keys(supervisorsMap).map((sup, idx) => {
+    const color = SUPERVISOR_COLORS[idx % SUPERVISOR_COLORS.length];
+    return {
+      label: sup,
+      data: monthKeys.map(m => supervisorsMap[sup][m] || 0),
+      backgroundColor: color,
+      borderColor: color,
+      borderWidth: 1,
+      borderRadius: 4
+    };
+  });
 
   let canvas = document.getElementById('chartAgentesPorLider');
   if (canvas) {
@@ -1246,16 +1256,36 @@ function renderTrendsLeaderTable() {
     if (existingChart) existingChart.destroy();
 
     new Chart(canvas.getContext('2d'), {
-      type: 'line',
+      type: 'bar',
       data: { labels, datasets },
       options: {
         responsive: true,
         maintainAspectRatio: false,
         plugins: {
-          legend: { position: 'bottom' }
+          title: {
+            display: true,
+            text: 'Cantidad de Ventas por Supervisor y por Mes',
+            font: { size: 16, weight: 'bold' },
+            color: '#2c3e50',
+            padding: { top: 10, bottom: 20 }
+          },
+          legend: { 
+            position: 'bottom',
+            labels: { boxWidth: 12, padding: 15 }
+          },
+          tooltip: {
+            mode: 'index',
+            intersect: false
+          }
         },
         scales: {
-          y: { beginAtZero: true }
+          x: { 
+            grid: { display: false } 
+          },
+          y: { 
+            beginAtZero: true,
+            title: { display: true, text: 'Ventas Totales' }
+          }
         }
       }
     });

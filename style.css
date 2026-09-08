@@ -87,15 +87,12 @@ th {
   background-color: #f1fcf8;
   color: #475569;
   font-weight: 600;
+  cursor: pointer;
+  user-select: none;
 }
 
 tr:hover {
   background-color: #f1fcf8;
-}
-
-th {
-  cursor: pointer;
-  user-select: none;
 }
 
 th:hover {
@@ -112,15 +109,15 @@ th:hover {
 }
 
 .dot-red {
-  background-color: #ff4444; /* Rojo */
+  background-color: #ff4444;
 }
 
 .dot-yellow {
-  background-color: #ffb937; /* Amarillo */
+  background-color: #ffb937;
 }
 
 .dot-green {
-  background-color: #06b706; /* Verde */
+  background-color: #06b706;
 }
 
 /* Estilo del botón Limpiar Filtros */
@@ -181,7 +178,7 @@ th:hover {
 }
 
 .session-block a {
-  color: #3498db;
+  color: #2563eb;
   text-decoration: underline;
 }
 
@@ -199,7 +196,7 @@ th:hover {
   box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.2);
 }
 
-/* Estilo del botón Riesgo Crítico */
+/* Botones Foco */
 .btn-risk {
   background-color: #ed6972;
   color: white;
@@ -227,11 +224,11 @@ th:hover {
   align-items: center;
   margin-bottom: 16px;
 }
+
 .table-header-flex h2 {
   margin-bottom: 0;
 }
 
-/* Estilo del botón 2 Meses en Verde */
 .btn-green {
   background-color: #10b981;
   color: white;
@@ -253,7 +250,6 @@ th:hover {
   border: 1px solid #fff;
 }
 
-/* Estilo del botón Agentes Regulares */
 .btn-regular {
   background-color: #3b82f6;
   color: white;
@@ -275,7 +271,7 @@ th:hover {
   border: 1px solid #fff;
 }
 
-/* Estilos para badges de calificaciones de Monitoreo Diagnóstico */
+/* Score Badges */
 .score-badge {
   display: inline-block;
   padding: 4px 10px;
@@ -304,7 +300,7 @@ th:hover {
   border: 1px solid #34d399;
 }
 
-/* Subpestañas (Pestañas secundarias) */
+/* Subpestañas */
 .subtabs-container {
   border-bottom: 2px solid #e2e8f0;
   padding-bottom: 8px;
@@ -333,7 +329,7 @@ th:hover {
   color: #06b706;
 }
 
-/* Estilos para Header Summary / KPI Cards */
+/* KPI Summary Cards */
 .summary-cards-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
@@ -381,15 +377,6 @@ th:hover {
   font-weight: 500;
 }
 
-/* Alineación numérica para métricas de ventas */
-#tbody-diagnostic-monitoring td:nth-child(4),
-#tbody-diagnostic-monitoring td:nth-child(5) {
-  text-align: right;
-  font-family: monospace;
-  font-size: 0.95rem;
-}
-
-/* Badge / Recuadro para el mes actual de los datos */
 .active-month-badge {
   display: inline-block;
   padding: 3px 8px;
@@ -401,14 +388,14 @@ th:hover {
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
 }
 
-/* Grid para Tarjetas de Tendencias por Agente */
+/* Gráficos y Cards */
 .agent-cards-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(380px, 1fr));
   gap: 20px;
 }
 
-.agent-trend-card {
+.agent-trend-card, .chart-card {
   background: #ffffff;
   border-radius: 8px;
   padding: 16px;
@@ -433,3 +420,8 @@ th:hover {
   width: 100%;
 }
 
+.chart-wrapper {
+  position: relative;
+  width: 100%;
+  height: 450px;
+}
