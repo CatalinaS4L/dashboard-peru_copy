@@ -16,7 +16,6 @@ let rawData = [];
 let filteredData = [];
 let focusCharts = [];
 
-// Variables de estado de los filtros rápidos
 let onlyCriticalRisk = false; 
 let onlyConsistentGreen = false;
 let onlyRegularPerformers = false;
@@ -29,7 +28,6 @@ let sortState = {
   'diagnostic-table': { column: null, isAsc: true }
 };
 
-// Función de lectura tolerante a prefijos o saltos de línea
 function getRowValue(row, keyName) {
   if (!row) return '';
   const targetKey = keyName.trim().toUpperCase();
@@ -43,7 +41,6 @@ function getRowValue(row, keyName) {
   return actualKey ? row[actualKey].toString().trim() : '';
 }
 
-// Lista exacta de palabras clave para parsear sesiones
 const EXACT_KEYWORDS = [
   "📅 Fecha",
   "🔗 URLTr:",
@@ -73,9 +70,6 @@ function parseSessionField(fullText, exactLabel) {
   return '-';
 }
 
-// ==========================================
-// 2. CARGA DE DATOS
-// ==========================================
 function populateMonthSelector() {
   const selectMes = document.getElementById('filter-mes');
   if (!selectMes) return;
@@ -91,7 +85,6 @@ function populateMonthSelector() {
   });
 }
 
-// Función encargada de traer únicamente los datos del mes en curso con bypass de caché
 async function fetchCurrentMonthData() {
   const monthKeys = Object.keys(MONTH_URLS);
   const lastMonthKey = monthKeys[monthKeys.length - 1];
@@ -124,7 +117,6 @@ async function preloadAllMonths() {
   let cachedHistorical = localStorage.getItem(HISTORICAL_CACHE_KEY);
   let historicalData = cachedHistorical ? JSON.parse(cachedHistorical) : {};
 
-  // Cargar meses antiguos solo si no están guardados en caché
   const missingHistorical = monthKeys.filter(m => m !== lastMonthKey && !historicalData[m]);
 
   if (missingHistorical.length > 0) {
@@ -147,10 +139,7 @@ async function preloadAllMonths() {
     localStorage.setItem(HISTORICAL_CACHE_KEY, JSON.stringify(historicalData));
   }
 
-  // Asignar los meses históricos guardados
   allMonthsData = { ...historicalData };
-
-  // Descargar en vivo el mes actual
   await fetchCurrentMonthData();
 }
 
@@ -212,17 +201,17 @@ function renderAllTables() {
   
   const tabTrends = document.getElementById('tab-trends');
   if (tabTrends && tabTrends.style.display !== 'none') {
-    renderTrendsTable();
+    const activeSubtab = document.querySelector('#tab-trends .subtab-button.active');
+    if (activeSubtab && activeSubtab.textContent.includes('Líder')) {
+      renderTrendsLeaderTable();
+    } else {
+      renderTrendsTable();
+    }
   }
 
   const tabSessions = document.getElementById('tab-sessions');
   if (tabSessions && tabSessions.style.display !== 'none') {
     renderTrainerSessions(filteredData);
-  }
-
-  const activeSubtab = document.querySelector('#tab-trends .subtab-button.active');
-  if (activeSubtab && activeSubtab.textContent.includes('Líder')) {
-    renderTrendsLeaderTable();
   }
 }
 
@@ -249,9 +238,6 @@ function resetSelect(elementId) {
   }
 }
 
-// ==========================================
-// 3. FILTROS Y EVENTOS
-// ==========================================
 function populateFilters(data) {
   const trainers = [...new Set(data.map(item => getRowValue(item, 'TRAINER')).filter(Boolean))];
   const supervisors = [...new Set(data.map(item => getRowValue(item, 'SUPERVISOR')).filter(Boolean))];
@@ -324,7 +310,6 @@ function resetAllFilters() {
   loadDashboardData();
 }
 
-// Evaluador de 3 meses consecutivos < 50%
 function hasThreeConsecutiveLowMonths(agentMonthsData) {
   const monthKeys = Object.keys(MONTH_URLS);
   let consecutiveLowCount = 0;
@@ -346,7 +331,6 @@ function hasThreeConsecutiveLowMonths(agentMonthsData) {
   return false;
 }
 
-// Evaluador de 2 meses consecutivos >= 90%
 function hasTwoConsecutiveGreenMonths(agentMonthsData) {
   const monthKeys = Object.keys(MONTH_URLS);
   let consecutiveGreenCount = 0;
@@ -368,9 +352,6 @@ function hasTwoConsecutiveGreenMonths(agentMonthsData) {
   return false;
 }
 
-// ==========================================
-// 4. CAMBIO DE PESTAÑAS
-// ==========================================
 function switchTab(tabName, evt) {
   if (tabName !== 'focus') {
     if (onlyCriticalRisk) toggleCriticalRiskFilter();
@@ -399,7 +380,12 @@ function switchTab(tabName, evt) {
   if (tabName === 'leaders' && tabLeaders) tabLeaders.style.display = 'block';
   if (tabName === 'trends' && tabTrends) {
     tabTrends.style.display = 'block';
-    renderTrendsTable();
+    const activeSubtab = document.querySelector('#tab-trends .subtab-button.active');
+    if (activeSubtab && activeSubtab.textContent.includes('Líder')) {
+      renderTrendsLeaderTable();
+    } else {
+      renderTrendsTable();
+    }
   }
   if (tabName === 'sessions' && tabSessions) {
     tabSessions.style.display = 'block';
@@ -415,9 +401,6 @@ function switchTab(tabName, evt) {
   }
 }
 
-// ==========================================
-// 5. ORDENAMIENTO & INSIGNIAS
-// ==========================================
 function handleSort(tableId, columnKey) {
   const current = sortState[tableId];
   if (!current) return;
@@ -489,11 +472,6 @@ function getComplianceBadge(valueStr) {
   return `<span class="status-dot ${colorClass}"></span>${num.toFixed(1)}%`;
 }
 
-// ==========================================
-// 6. RENDERIZADO DE TABLAS
-// ==========================================
-
-// TABLA 1: Listado General de Agentes
 function renderTable(data) {
   const tbody = document.querySelector('#agents-table tbody');
   if (!tbody) return;
@@ -530,7 +508,6 @@ function renderTable(data) {
   });
 }
 
-// TABLA FOCO: Matriz por Agente
 function renderFocusTable(data) {
   const table = document.getElementById('focus-table');
   if (!table) return;
@@ -1227,7 +1204,7 @@ function switchSubTab(subTabName, evt) {
 }
 
 function renderTrendsLeaderTable() {
-  const container = document.getElementById('subtab-por-lider');
+  const container = document.getElementById('subtab-trends-leader');
   if (!container) return;
 
   const monthKeys = Object.keys(allMonthsData);
@@ -1360,9 +1337,6 @@ function renderHeaderSummary() {
   if (elQuality) elQuality.textContent = `${avgQuality}%`;
 }
 
-// ==========================================
-// 7. INICIALIZACIÓN
-// ==========================================
 document.addEventListener('DOMContentLoaded', () => {
   populateMonthSelector();
   
@@ -1376,7 +1350,6 @@ document.addEventListener('DOMContentLoaded', () => {
   
   preloadAllMonths();
 
-  // Recarga automática en segundo plano cada 2 minutos
   setInterval(() => {
     fetchCurrentMonthData();
   }, 120000);

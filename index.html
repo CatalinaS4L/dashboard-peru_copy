@@ -137,9 +137,9 @@
           <button id="btn-consistent-green" type="button" class="btn-green" onclick="toggleConsistentGreenFilter()">
             🌟 Mostrar Agentes 2 Meses en Verde
           </button>
-            <button id="btn-regular-performers" type="button" class="btn-regular" onclick="toggleRegularPerformersFilter()">
-              📊 Mostrar Agentes Regulares
-            </button>
+          <button id="btn-regular-performers" type="button" class="btn-regular" onclick="toggleRegularPerformersFilter()">
+            📊 Mostrar Agentes Regulares
+          </button>
         </div>
       </div>
       <div class="table-wrapper">
@@ -210,22 +210,22 @@
         <button class="subtab-button" onclick="switchSubTab('trends-leader', event)">Por Líder</button>
       </div>
     
-      <!-- SUBTAB 1: Por Agente (Recuadros/Tarjetas con Gráficos) -->
+      <!-- SUBTAB 1: Por Agente -->
       <div id="subtab-trends-agent" class="subtab-content">
         <div id="agent-trends-cards-container" class="agent-cards-grid">
           <!-- Se generará dinámicamente mediante JS -->
         </div>
       </div>
     
-      <!-- SUBTAB 2: Por Líder -->
-      <div id="subtab-por-lider" class="subtab-content">
-        <div style="position: relative; width: 100%; max-width: 900px; margin: 0 auto;">
+      <!-- SUBTAB 2: Por Líder (ID Corregido) -->
+      <div id="subtab-trends-leader" class="subtab-content" style="display: none;">
+        <div style="position: relative; width: 100%; height: 400px; max-width: 900px; margin: 0 auto;">
           <canvas id="chartAgentesPorLider"></canvas>
         </div>
       </div>
     </section>
 
-    <!-- TAB 4: Sesiones Trainer (Tarjetas por Agente) -->
+    <!-- TAB 4: Sesiones Trainer -->
     <section id="tab-sessions" class="tab-content" style="display: none;">
       <div id="trainer-sessions-container" class="sessions-cards-grid">
         <!-- Se genera dinámicamente mediante JS -->
@@ -260,7 +260,6 @@
 
   </main>
 
-  <!-- Script con la lógica del dashboard -->
   <script src="script.js"></script>
 </body>
 </html>
