@@ -1457,7 +1457,6 @@ function renderQualityScatterPlot(data) {
   const canvas = document.getElementById('chartQualityVsPerformance');
   if (!canvas) return;
 
-  // Filtrar solo filas que tengan Nota Final y Cumplimiento válido
   const validData = data.filter(row => {
     const nota = getRowValue(row, 'NOTA FINAL');
     const cumpl = getRowValue(row, 'CUMPLIMIENTO MES');
@@ -1469,7 +1468,6 @@ function renderQualityScatterPlot(data) {
     return;
   }
 
-  // Mapear datos a puntos {x, y, agent}
   const scatterPoints = validData.map(row => ({
     x: parseNum(getRowValue(row, 'NOTA FINAL')),
     y: parseNum(getRowValue(row, 'CUMPLIMIENTO MES')),
@@ -1487,7 +1485,7 @@ function renderQualityScatterPlot(data) {
       datasets: [{
         label: 'Agentes',
         data: scatterPoints,
-        backgroundColor: 'rgba(37, 99, 235, 0.7)', // Azul primario
+        backgroundColor: 'rgba(37, 99, 235, 0.7)',
         borderColor: '#1d4ed8',
         borderWidth: 1,
         pointRadius: 6,
@@ -1504,6 +1502,45 @@ function renderQualityScatterPlot(data) {
             label: (context) => {
               const pt = context.raw;
               return `${pt.agent}: Calidad = ${pt.x}% | Cumplimiento = ${pt.y}%`;
+            }
+          }
+        },
+        // CONFIGURACIÓN DE LOS 4 CUADRANTES
+        annotation: {
+          annotations: {
+            // Línea horizontal en Y = 90%
+            lineMeta: {
+              type: 'line',
+              yMin: 90,
+              yMax: 90,
+              borderColor: '#ef4444', // Rojo / Alerta
+              borderWidth: 2,
+              borderDash: [6, 6],    // Punteada
+              label: {
+                display: true,
+                content: 'Meta Ventas (90%)',
+                position: 'start',
+                backgroundColor: 'rgba(239, 68, 68, 0.8)',
+                color: '#fff',
+                font: { size: 10, weight: 'bold' }
+              }
+            },
+            // Línea vertical en X = 90%
+            lineCalidad: {
+              type: 'line',
+              xMin: 90,
+              xMax: 90,
+              borderColor: '#ef4444',
+              borderWidth: 2,
+              borderDash: [6, 6],
+              label: {
+                display: true,
+                content: 'Meta Calidad (90%)',
+                position: 'start',
+                backgroundColor: 'rgba(239, 68, 68, 0.8)',
+                color: '#fff',
+                font: { size: 10, weight: 'bold' }
+              }
             }
           }
         }
