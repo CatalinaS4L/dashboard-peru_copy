@@ -22,6 +22,7 @@ let allMonthsData = {};
 let rawData = [];
 let filteredData = [];
 let focusCharts = [];
+let scatterChartInstance = null;
 
 let onlyCriticalRisk = false; 
 let onlyConsistentGreen = false;
@@ -1095,19 +1096,121 @@ function getScoreBadge(valueStr) {
   return `<span class="score-badge ${colorClass}">${num.toFixed(1)}%</span>`;
 }
 
+function renderQualityScatterPlot(data) {
+  const canvas = document.getElementById('chartQualityVsPerformance');
+  if (!canvas) return;
+
+  const validData = data.filter(row => {
+    const nota = getRowValue(row, 'NOTA FINAL');
+    const cumpl = getRowValue(row, 'CUMPLIMIENTO MES');
+    return nota && nota !== '-' && cumpl && cumpl !== '-';
+  });
+
+  if (validData.length === 0) {
+    if (scatterChartInstance) scatterChartInstance.destroy();
+    return;
+  }
+
+  const scatterPoints = validData.map(row => ({
+    x: parseNum(getRowValue(row, 'NOTA FINAL')),
+    y: parseNum(getRowValue(row, 'CUMPLIMIENTO MES')),
+    agent: getRowValue(row, 'PROMOTOR') || 'Agente'
+  }));
+
+  if (scatterChartInstance) {
+    scatterChartInstance.destroy();
+  }
+
+  const ctx = canvas.getContext('2d');
+  scatterChartInstance = new Chart(ctx, {
+    type: 'scatter',
+    data: {
+      datasets: [{
+        label: 'Agentes',
+        data: scatterPoints,
+        backgroundColor: 'rgba(37, 99, 235, 0.7)',
+        borderColor: '#1d4ed8',
+        borderWidth: 1,
+        pointRadius: 6,
+        pointHoverRadius: 9
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            label: (context) => {
+              const pt = context.raw;
+              return `${pt.agent}: Calidad = ${pt.x}% | Cumplimiento = ${pt.y}%`;
+            }
+          }
+        },
+        annotation: {
+          annotations: {
+            lineMeta: {
+              type: 'line',
+              yMin: 90,
+              yMax: 90,
+              borderColor: '#ff4444',
+              borderWidth: 2,
+              borderDash: [6, 6],
+              label: {
+                display: true,
+                content: 'Meta Ventas (90%)',
+                position: 'start',
+                backgroundColor: 'rgba(239, 68, 68, 0.8)',
+                color: '#fff',
+                font: { size: 10, weight: 'bold' }
+              }
+            },
+            lineCalidad: {
+              type: 'line',
+              xMin: 90,
+              xMax: 90,
+              borderColor: '#ff4444',
+              borderWidth: 2,
+              borderDash: [6, 6],
+              label: {
+                display: true,
+                content: 'Meta Calidad (90%)',
+                position: 'start',
+                backgroundColor: 'rgba(239, 68, 68, 0.8)',
+                color: '#fff',
+                font: { size: 10, weight: 'bold' }
+              }
+            }
+          }
+        }
+      },
+      scales: {
+        x: {
+          title: { display: true, text: 'Nota Final de Calidad (%)', font: { weight: 'bold' } },
+          min: 0,
+          max: 100
+        },
+        y: {
+          title: { display: true, text: '% Cumplimiento de Meta', font: { weight: 'bold' } },
+          beginAtZero: true
+        }
+      }
+    }
+  });
+}
+
 function renderDiagnosticTable(data) {
   const tbody = document.querySelector('#diagnostic-table tbody');
   if (!tbody) return;
   tbody.innerHTML = '';
 
-  // 1. Si no hay datos, renderizar gráfico vacío/destruir instancia y salir
   if (!data || data.length === 0) {
     renderQualityScatterPlot([]); 
     tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;">No hay datos disponibles.</td></tr>';
     return;
   }
 
-  // 2. Renderizar el gráfico con los datos que llegaron
   renderQualityScatterPlot(data);
 
   const columns = [
@@ -1240,17 +1343,14 @@ function renderTrendsLeaderTable() {
     monthKeys.forEach(m => {
       const rows = (allMonthsData[m] || []).filter(r => getRowValue(r, 'SUPERVISOR') === sup);
       
-      // Total Ventas (Cierre)
       const totalCierre = rows.reduce((sum, r) => sum + parseNum(getRowValue(r, 'CIERRE')), 0);
       supervisorsVentasMap[sup][m] = totalCierre;
 
-      // Cantidad de Promotores Únicos
       const uniquePromotores = new Set(rows.map(r => getRowValue(r, 'PROMOTOR')).filter(Boolean));
       supervisorsPromotoresMap[sup][m] = uniquePromotores.size;
     });
   });
 
-  // Datasets para Ventas
   const datasetsVentas = Object.keys(supervisorsVentasMap).map((sup, idx) => {
     const color = SUPERVISOR_COLORS[idx % SUPERVISOR_COLORS.length];
     return {
@@ -1263,7 +1363,6 @@ function renderTrendsLeaderTable() {
     };
   });
 
-  // Datasets para Promotores
   const datasetsPromotores = Object.keys(supervisorsPromotoresMap).map((sup, idx) => {
     const color = SUPERVISOR_COLORS[idx % SUPERVISOR_COLORS.length];
     return {
@@ -1276,7 +1375,6 @@ function renderTrendsLeaderTable() {
     };
   });
 
-  // 1. Renderizar Gráfico de Promotores por Supervisor
   let canvasPromotores = document.getElementById('chartPromotoresPorLider');
   if (canvasPromotores) {
     let existingChartProm = Chart.getChart(canvasPromotores);
@@ -1317,7 +1415,6 @@ function renderTrendsLeaderTable() {
     });
   }
 
-  // 2. Renderizar Gráfico de Ventas por Supervisor
   let canvasVentas = document.getElementById('chartAgentesPorLider');
   if (canvasVentas) {
     let existingChartVentas = Chart.getChart(canvasVentas);
@@ -1450,112 +1547,3 @@ document.addEventListener('DOMContentLoaded', () => {
     fetchCurrentMonthData();
   }, 120000);
 });
-
-let scatterChartInstance = null;
-
-function renderQualityScatterPlot(data) {
-  const canvas = document.getElementById('chartQualityVsPerformance');
-  if (!canvas) return;
-
-  const validData = data.filter(row => {
-    const nota = getRowValue(row, 'NOTA FINAL');
-    const cumpl = getRowValue(row, 'CUMPLIMIENTO MES');
-    return nota && nota !== '-' && cumpl && cumpl !== '-';
-  });
-
-  if (validData.length === 0) {
-    if (scatterChartInstance) scatterChartInstance.destroy();
-    return;
-  }
-
-  const scatterPoints = validData.map(row => ({
-    x: parseNum(getRowValue(row, 'NOTA FINAL')),
-    y: parseNum(getRowValue(row, 'CUMPLIMIENTO MES')),
-    agent: getRowValue(row, 'PROMOTOR') || 'Agente'
-  }));
-
-  if (scatterChartInstance) {
-    scatterChartInstance.destroy();
-  }
-
-  const ctx = canvas.getContext('2d');
-  scatterChartInstance = new Chart(ctx, {
-    type: 'scatter',
-    data: {
-      datasets: [{
-        label: 'Agentes',
-        data: scatterPoints,
-        backgroundColor: 'rgba(37, 99, 235, 0.7)',
-        borderColor: '#1d4ed8',
-        borderWidth: 1,
-        pointRadius: 6,
-        pointHoverRadius: 9
-      }]
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      plugins: {
-        legend: { display: false },
-        tooltip: {
-          callbacks: {
-            label: (context) => {
-              const pt = context.raw;
-              return `${pt.agent}: Calidad = ${pt.x}% | Cumplimiento = ${pt.y}%`;
-            }
-          }
-        },
-        // CONFIGURACIÓN DE LOS 4 CUADRANTES
-        annotation: {
-          annotations: {
-            // Línea horizontal en Y = 90%
-            lineMeta: {
-              type: 'line',
-              yMin: 90,
-              yMax: 90,
-              borderColor: '#ef4444', // Rojo / Alerta
-              borderWidth: 2,
-              borderDash: [6, 6],    // Punteada
-              label: {
-                display: true,
-                content: 'Meta Ventas (90%)',
-                position: 'start',
-                backgroundColor: 'rgba(239, 68, 68, 0.8)',
-                color: '#fff',
-                font: { size: 10, weight: 'bold' }
-              }
-            },
-            // Línea vertical en X = 90%
-            lineCalidad: {
-              type: 'line',
-              xMin: 90,
-              xMax: 90,
-              borderColor: '#ef4444',
-              borderWidth: 2,
-              borderDash: [6, 6],
-              label: {
-                display: true,
-                content: 'Meta Calidad (90%)',
-                position: 'start',
-                backgroundColor: 'rgba(239, 68, 68, 0.8)',
-                color: '#fff',
-                font: { size: 10, weight: 'bold' }
-              }
-            }
-          }
-        }
-      },
-      scales: {
-        x: {
-          title: { display: true, text: 'Nota Final de Calidad (%)', font: { weight: 'bold' } },
-          min: 0,
-          max: 100
-        },
-        y: {
-          title: { display: true, text: '% Cumplimiento de Meta', font: { weight: 'bold' } },
-          beginAtZero: true
-        }
-      }
-    }
-  });
-}
