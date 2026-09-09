@@ -1560,17 +1560,58 @@ function renderTrendsGlobalTable() {
   if (monthKeys.length === 0) return;
 
   const labels = monthKeys.map(m => m.charAt(0).toUpperCase() + m.slice(1));
+  
+  // --- ESTRUCTURAS DE DATOS ---
   const totalVentas = [];
   const totalMeta = [];
+  const semanasAcumuladas = { V1: 0, V2: 0, V3: 0, V4: 0, V5: 0 };
+  
+  // Conteo para semáforo por mes
+  const semaforoPorMes = {
+    rojo: [],
+    amarillo: [],
+    verde: []
+  };
 
   monthKeys.forEach(m => {
     const rows = allMonthsData[m] || [];
+    
+    // 1. Datos Ventas vs Meta
     const ventas = rows.reduce((sum, r) => sum + parseNum(getRowValue(r, 'CIERRE')), 0);
     const meta = rows.reduce((sum, r) => sum + parseNum(getRowValue(r, 'META')), 0);
     totalVentas.push(ventas);
     totalMeta.push(meta);
+
+    // 2. Acumulado de Ventas por Semana
+    ['V1', 'V2', 'V3', 'V4', 'V5'].forEach(vKey => {
+      const sumaSemana = rows.reduce((sum, r) => sum + parseNum(getRowValue(r, vKey)), 0);
+      semanasAcumuladas[vKey] += sumaSemana;
+    });
+
+    // 3. Distribución del Semáforo (Rojo, Amarillo, Verde)
+    let cRojo = 0, cAmarillo = 0, cVerde = 0;
+    rows.forEach(r => {
+      const v = parseNum(getRowValue(r, 'CIERRE'));
+      const me = parseNum(getRowValue(r, 'META'));
+      const pct = me > 0 ? (v / me) * 100 : 0;
+
+      if (pct < 80) {
+        cRojo++;
+      } else if (pct < 100) {
+        cAmarillo++;
+      } else {
+        cVerde++;
+      }
+    });
+
+    semaforoPorMes.rojo.push(cRojo);
+    semaforoPorMes.amarillo.push(cAmarillo);
+    semaforoPorMes.verde.push(cVerde);
   });
 
+  // ==========================================
+  // GRÁFICO 1: VENTAS VS META
+  // ==========================================
   let canvasGlobal = document.getElementById('chartGlobalVentas');
   if (canvasGlobal) {
     let existingChart = Chart.getChart(canvasGlobal);
@@ -1581,36 +1622,81 @@ function renderTrendsGlobalTable() {
       data: {
         labels: labels,
         datasets: [
-          {
-            label: 'Ventas Totales',
-            data: totalVentas,
-            backgroundColor: '#10b981',
-            borderRadius: 4
-          },
-          {
-            label: 'Meta Total',
-            data: totalMeta,
-            backgroundColor: '#ef4444',
-            borderRadius: 4
-          }
+          { label: 'Ventas Totales', data: totalVentas, backgroundColor: '#10b981', borderRadius: 4 },
+          { label: 'Meta Total', data: totalMeta, backgroundColor: '#ef4444', borderRadius: 4 }
         ]
       },
       options: {
         responsive: true,
         maintainAspectRatio: false,
         plugins: {
-          title: {
-            display: true,
-            text: 'Rendimiento Global de Ventas vs. Meta General por Mes',
-            font: { size: 16, weight: 'bold' },
-            color: '#2c3e50',
-            padding: { top: 10, bottom: 20 }
-          },
+          title: { display: true, text: 'Rendimiento Global de Ventas vs. Meta General por Mes', font: { size: 16, weight: 'bold' } },
+          legend: { position: 'bottom' }
+        },
+        scales: { y: { beginAtZero: true } }
+      }
+    });
+  }
+
+  // ==========================================
+  // GRÁFICO 2: VENTAS POR SEMANA (V1 A V5)
+  // ==========================================
+  let canvasSemanas = document.getElementById('chartGlobalSemanas');
+  if (canvasSemanas) {
+    let existingChart = Chart.getChart(canvasSemanas);
+    if (existingChart) existingChart.destroy();
+
+    new Chart(canvasSemanas.getContext('2d'), {
+      type: 'bar',
+      data: {
+        labels: ['Semana 1 (V1)', 'Semana 2 (V2)', 'Semana 3 (V3)', 'Semana 4 (V4)', 'Semana 5 (V5)'],
+        datasets: [{
+          label: 'Ventas Acumuladas',
+          data: [semanasAcumuladas.V1, semanasAcumuladas.V2, semanasAcumuladas.V3, semanasAcumuladas.V4, semanasAcumuladas.V5],
+          backgroundColor: '#3b82f6',
+          borderRadius: 4
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          title: { display: true, text: 'Distribución Acumulada de Ventas por Semana (V1 a V5)', font: { size: 16, weight: 'bold' } },
+          legend: { position: 'bottom' }
+        },
+        scales: { y: { beginAtZero: true } }
+      }
+    });
+  }
+
+  // ==========================================
+  // GRÁFICO 3: SEMÁFORO GLOBAL POR MES (STACKED)
+  // ==========================================
+  let canvasSemaforo = document.getElementById('chartGlobalSemaforo');
+  if (canvasSemaforo) {
+    let existingChart = Chart.getChart(canvasSemaforo);
+    if (existingChart) existingChart.destroy();
+
+    new Chart(canvasSemaforo.getContext('2d'), {
+      type: 'bar',
+      data: {
+        labels: labels,
+        datasets: [
+          { label: 'Rojo (<80%)', data: semaforoPorMes.rojo, backgroundColor: '#ff4d4d' },
+          { label: 'Amarillo (80%-99%)', data: semaforoPorMes.amarillo, backgroundColor: '#ffc107' },
+          { label: 'Verde (>=100%)', data: semaforoPorMes.verde, backgroundColor: '#00c853' }
+        ]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          title: { display: true, text: 'SEMÁFORO GLOBAL POR MES', font: { size: 16, weight: 'bold' } },
           legend: { position: 'bottom' }
         },
         scales: {
-          x: { grid: { display: false } },
-          y: { beginAtZero: true }
+          x: { stacked: true },
+          y: { stacked: true, beginAtZero: true }
         }
       }
     });
