@@ -209,6 +209,7 @@
       <div class="subtabs-container" style="margin-bottom: 15px; display: flex; gap: 8px;">
         <button class="subtab-button active" onclick="switchSubTab('trends-agent', event)">Por Agente</button>
         <button class="subtab-button" onclick="switchSubTab('trends-leader', event)">Por Líder</button>
+        <button class="subtab-button" onclick="switchSubTab('trends-global', event)">Global</button>
       </div>
     
       <div id="subtab-trends-agent" class="subtab-content">
@@ -226,6 +227,15 @@
         <div class="chart-card">
           <div class="chart-wrapper">
             <canvas id="chartAgentesPorLider"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <!-- Nueva Subpestaña Global -->
+      <div id="subtab-trends-global" class="subtab-content" style="display: none;">
+        <div class="chart-card" style="margin-bottom: 24px;">
+          <div class="chart-wrapper">
+            <canvas id="chartGlobalVentas"></canvas>
           </div>
         </div>
       </div>

@@ -391,6 +391,8 @@ function switchTab(tabName, evt) {
     const activeSubtab = document.querySelector('#tab-trends .subtab-button.active');
     if (activeSubtab && activeSubtab.textContent.includes('Líder')) {
       renderTrendsLeaderTable();
+    } else if (activeSubtab && activeSubtab.textContent.includes('Global')) {
+      renderTrendsGlobalTable();
     } else {
       renderTrendsTable();
     }
@@ -1315,6 +1317,8 @@ function switchSubTab(subTabName, evt) {
     renderTrendsTable();
   } else if (subTabName === 'trends-leader') {
     renderTrendsLeaderTable();
+  } else if (subTabName === 'trends-global') {
+    renderTrendsGlobalTable();
   }
 }
 
@@ -1547,3 +1551,68 @@ document.addEventListener('DOMContentLoaded', () => {
     fetchCurrentMonthData();
   }, 120000);
 });
+
+function renderTrendsGlobalTable() {
+  const container = document.getElementById('subtab-trends-global');
+  if (!container) return;
+
+  const monthKeys = Object.keys(allMonthsData);
+  if (monthKeys.length === 0) return;
+
+  const labels = monthKeys.map(m => m.charAt(0).toUpperCase() + m.slice(1));
+  const totalVentas = [];
+  const totalMeta = [];
+
+  monthKeys.forEach(m => {
+    const rows = allMonthsData[m] || [];
+    const ventas = rows.reduce((sum, r) => sum + parseNum(getRowValue(r, 'CIERRE')), 0);
+    const meta = rows.reduce((sum, r) => sum + parseNum(getRowValue(r, 'META')), 0);
+    totalVentas.push(ventas);
+    totalMeta.push(meta);
+  });
+
+  let canvasGlobal = document.getElementById('chartGlobalVentas');
+  if (canvasGlobal) {
+    let existingChart = Chart.getChart(canvasGlobal);
+    if (existingChart) existingChart.destroy();
+
+    new Chart(canvasGlobal.getContext('2d'), {
+      type: 'bar',
+      data: {
+        labels: labels,
+        datasets: [
+          {
+            label: 'Ventas Totales',
+            data: totalVentas,
+            backgroundColor: '#10b981',
+            borderRadius: 4
+          },
+          {
+            label: 'Meta Total',
+            data: totalMeta,
+            backgroundColor: '#ef4444',
+            borderRadius: 4
+          }
+        ]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          title: {
+            display: true,
+            text: 'Rendimiento Global de Ventas vs. Meta General por Mes',
+            font: { size: 16, weight: 'bold' },
+            color: '#2c3e50',
+            padding: { top: 10, bottom: 20 }
+          },
+          legend: { position: 'bottom' }
+        },
+        scales: {
+          x: { grid: { display: false } },
+          y: { beginAtZero: true }
+        }
+      }
+    });
+  }
+}
