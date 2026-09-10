@@ -1468,18 +1468,24 @@ function renderHeaderSummary() {
   const lastMonthData = allMonthsData[lastMonthKey] || [];
   const lastMonthFormatted = lastMonthKey.charAt(0).toUpperCase() + lastMonthKey.slice(1);
 
+  // 1. Identificar únicamente Promotores con STATUS AGENTE = 'ACTIVO' en el último mes
   const activeAgentsLastMonth = new Set(
     lastMonthData
-      .map(row => getRowValue(row, 'PROMOTOR'))
+      .filter(row => {
+        const status = getRowValue(row, 'STATUS AGENTE').toUpperCase();
+        return status.includes('ACTIVO');
+      })
+      .map(row => getRowValue(row, 'PROMOTOR').toUpperCase())
       .filter(name => name && name.trim() !== '')
   );
 
   const totalActive = activeAgentsLastMonth.size;
 
+  // 2. Construir mapa de datos históricos por agente
   const fullAgentsMap = {};
   Object.keys(allMonthsData).forEach(m => {
     allMonthsData[m].forEach(row => {
-      const agentName = getRowValue(row, 'PROMOTOR');
+      const agentName = getRowValue(row, 'PROMOTOR').toUpperCase();
       if (!agentName) return;
 
       if (!fullAgentsMap[agentName]) {
@@ -1492,6 +1498,7 @@ function renderHeaderSummary() {
     });
   });
 
+  // 3. Evaluar Riesgo Crítico y Consistentes Verde SOLO entre los agentes ACTIVOS del último mes
   let countCriticalRisk = 0;
   let countConsistentGreen = 0;
 
@@ -1507,21 +1514,24 @@ function renderHeaderSummary() {
     }
   });
 
+  // 4. Calcular Promedio de Calidad General ÚNICAMENTE para el último mes (ignorando notas vacías)
   let sumDiagnostic = 0;
   let countDiagnostic = 0;
 
-  Object.keys(allMonthsData).forEach(m => {
-    allMonthsData[m].forEach(row => {
-      const finalNote = getRowValue(row, 'NOTA FINAL');
-      if (finalNote && finalNote !== '-' && finalNote.trim() !== '') {
-        sumDiagnostic += parseNum(finalNote);
+  lastMonthData.forEach(row => {
+    const finalNote = getRowValue(row, 'NOTA FINAL');
+    if (finalNote && finalNote !== '-' && finalNote.trim() !== '') {
+      const numVal = parseNum(finalNote);
+      if (!isNaN(numVal) && numVal > 0) {
+        sumDiagnostic += numVal;
         countDiagnostic++;
       }
-    });
+    }
   });
 
-  const avgQuality = countDiagnostic > 0 ? (sumDiagnostic / countDiagnostic).toFixed(1) : 0;
+  const avgQuality = countDiagnostic > 0 ? (sumDiagnostic / countDiagnostic).toFixed(1) : '0.0';
 
+  // 5. Renderizar los valores en los elementos DOM del Header
   const elActive = document.getElementById('kpi-active-agents');
   const elActiveMonth = document.getElementById('kpi-active-month');
   const elRisk = document.getElementById('kpi-critical-risk');
@@ -1596,9 +1606,9 @@ function renderTrendsGlobalTable() {
       const me = parseNum(getRowValue(r, 'META'));
       const pct = me > 0 ? (v / me) * 100 : 0;
 
-      if (pct < 80) {
+      if (pct < 50) {
         cRojo++;
-      } else if (pct < 100) {
+      } else if (pct < 90) {
         cAmarillo++;
       } else {
         cVerde++;
@@ -1683,9 +1693,9 @@ function renderTrendsGlobalTable() {
       data: {
         labels: labels,
         datasets: [
-          { label: 'Rojo (<80%)', data: semaforoPorMes.rojo, backgroundColor: '#ff4d4d' },
-          { label: 'Amarillo (80%-99%)', data: semaforoPorMes.amarillo, backgroundColor: '#ffc107' },
-          { label: 'Verde (>=100%)', data: semaforoPorMes.verde, backgroundColor: '#00c853' }
+          { label: 'Rojo (<50%)', data: semaforoPorMes.rojo, backgroundColor: '#ff4d4d' },
+          { label: 'Amarillo (50%-89%)', data: semaforoPorMes.amarillo, backgroundColor: '#ffc107' },
+          { label: 'Verde (>=90%)', data: semaforoPorMes.verde, backgroundColor: '#00c853' }
         ]
       },
       options: {
