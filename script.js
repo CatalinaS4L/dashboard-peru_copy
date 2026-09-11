@@ -528,6 +528,7 @@ function renderFocusTable(data) {
   thead.innerHTML = '';
   tbody.innerHTML = '';
 
+  // Limpiar instancias previas de gráficos
   focusCharts.forEach(chart => chart.destroy());
   focusCharts = [];
 
@@ -541,6 +542,7 @@ function renderFocusTable(data) {
 
   const currentSort = sortState['focus-table'] || { column: null, isAsc: true };
 
+  // 1. Construir encabeza sin la columna de Gráficos
   let headerHTML = `<tr><th onclick="handleSort('focus-table', 'PROMOTOR')" style="cursor:pointer;">Agente</th>`;
   monthsToDisplay.forEach(m => {
     const mesFormatted = m.charAt(0).toUpperCase() + m.slice(1);
@@ -550,22 +552,36 @@ function renderFocusTable(data) {
     headerHTML += `<th onclick="handleSort('focus-table', '${colCierre}')" style="text-align:center; cursor:pointer;">Cierre (${mesFormatted})</th>`;
     headerHTML += `<th onclick="handleSort('focus-table', '${colCumpl}')" style="text-align:center; cursor:pointer;">Cumpl. % (${mesFormatted})</th>`;
   });
-  headerHTML += '<th style="text-align:center; min-width: 180px;">Gráfico de Performance</th></tr>';
+  headerHTML += `</tr>`;
   thead.innerHTML = headerHTML;
 
+  // 2. Mapear datos completos de todos los meses
   const fullAgentsMap = {};
+  const monthKeys = Object.keys(allMonthsData);
+  const lastMonthKey = monthKeys[monthKeys.length - 1];
+
   Object.keys(allMonthsData).forEach(m => {
     allMonthsData[m].forEach(row => {
       const agentName = getRowValue(row, 'PROMOTOR');
       if (!agentName) return;
 
       if (!fullAgentsMap[agentName]) {
-        fullAgentsMap[agentName] = { agentName: agentName, monthsData: {} };
+        fullAgentsMap[agentName] = { 
+          agentName: agentName, 
+          monthsData: {},
+          lastMonthStatus: '' 
+        };
       }
+
       fullAgentsMap[agentName].monthsData[m] = {
         cierre: parseNum(getRowValue(row, 'CIERRE')),
         cumplimiento: getRowValue(row, 'CUMPLIMIENTO MES') || '-'
       };
+
+      // Guardar status en el último mes activo registrado
+      if (m === lastMonthKey) {
+        fullAgentsMap[agentName].lastMonthStatus = getRowValue(row, 'STATUS AGENTE').toUpperCase();
+      }
     });
   });
 
@@ -575,14 +591,18 @@ function renderFocusTable(data) {
     if (!agentName) return;
 
     if (!agentsMap[agentName]) {
-      agentsMap[agentName] = fullAgentsMap[agentName] || { agentName: agentName, monthsData: {} };
+      agentsMap[agentName] = fullAgentsMap[agentName] || { agentName: agentName, monthsData: {}, lastMonthStatus: '' };
     }
   });
 
   let agentsList = Object.values(agentsMap);
 
+  // 3. Aplicar filtros con validación de estado ACTIVO para Riesgo Crítico
   if (onlyCriticalRisk) {
-    agentsList = agentsList.filter(agent => hasThreeConsecutiveLowMonths(agent.monthsData));
+    agentsList = agentsList.filter(agent => {
+      const isActive = agent.lastMonthStatus.includes('ACTIVO');
+      return isActive && hasThreeConsecutiveLowMonths(agent.monthsData);
+    });
   } else if (onlyConsistentGreen) {
     agentsList = agentsList.filter(agent => hasTwoConsecutiveGreenMonths(agent.monthsData));
   } else if (onlyRegularPerformers) {
@@ -595,17 +615,18 @@ function renderFocusTable(data) {
   if (agentsList.length === 0) {
     let emptyMessage = 'No hay datos disponibles con los filtros seleccionados.';
     if (onlyCriticalRisk) {
-      emptyMessage = '⚠️ No hay ninguna Promotora o Promotor en Riesgo Crítico (3 meses seguidos en rojo < 50%) con los filtros aplicados.';
+      emptyMessage = '⚠️ No hay ningún Promotor ACTIVO en Riesgo Crítico (3 meses seguidos < 50%) con los filtros aplicados.';
     } else if (onlyConsistentGreen) {
-      emptyMessage = '🌟 No hay ninguna Promotora o Promotor con 2 meses consecutivos en verde (≥ 90%) con los filtros aplicados.';
+      emptyMessage = '🌟 No hay ningún Promotor con 2 meses consecutivos en verde (≥ 90%) con los filtros aplicados.';
     } else if (onlyRegularPerformers) {
-      emptyMessage = '📊 No hay ninguna Promotora o Promotor en categoría Regular con los filtros aplicados.';
+      emptyMessage = '📊 No hay ningún Promotor en categoría Regular con los filtros aplicados.';
     }
-    const totalCols = (monthsToDisplay.length * 2) + 2;
+    const totalCols = (monthsToDisplay.length * 2) + 1;
     tbody.innerHTML = `<tr><td colspan="${totalCols}" style="text-align:center; padding: 20px; font-weight: bold; color: #555;">${emptyMessage}</td></tr>`;
     return;
   }
 
+  // 4. Ordenamiento
   if (currentSort.column) {
     const colKey = currentSort.column;
     const isAsc = currentSort.isAsc;
@@ -632,77 +653,27 @@ function renderFocusTable(data) {
     });
   }
 
-  agentsList.forEach((agent, index) => {
+  // 5. Renderizado de celdas de la tabla
+  agentsList.forEach((agent) => {
     const tr = document.createElement('tr');
     let rowHTML = `<td><strong>${agent.agentName}</strong></td>`;
-    
-    const chartLabels = [];
-    const chartData = [];
 
     monthsToDisplay.forEach(m => {
-      const mesFormatted = m.charAt(0).toUpperCase() + m.slice(1);
       const monthRecord = agent.monthsData[m];
-      
-      chartLabels.push(mesFormatted);
 
       if (monthRecord) {
         const cierre = monthRecord.cierre;
         const cumplHTML = getComplianceBadge(monthRecord.cumplimiento);
         rowHTML += `<td style="text-align:center;">${cierre}</td>`;
         rowHTML += `<td style="text-align:center;">${cumplHTML}</td>`;
-        chartData.push(cierre);
       } else {
         rowHTML += `<td style="text-align:center; color: #999;">-</td>`;
         rowHTML += `<td style="text-align:center; color: #999;">-</td>`;
-        chartData.push(0);
       }
     });
 
-    const canvasId = `chart-agent-${index}`;
-    rowHTML += `
-      <td style="text-align:center; padding: 5px;">
-        <div style="width: 170px; height: 45px; margin: 0 auto;">
-          <canvas id="${canvasId}"></canvas>
-        </div>
-      </td>
-    `;
-
     tr.innerHTML = rowHTML;
     tbody.appendChild(tr);
-
-    const ctx = document.getElementById(canvasId)?.getContext('2d');
-    if (ctx) {
-      const newChart = new Chart(ctx, {
-        type: 'bar',
-        data: {
-          labels: chartLabels,
-          datasets: [{
-            label: 'Cierre',
-            data: chartData,
-            backgroundColor: '#2563eb',
-            borderRadius: 4,
-            maxBarThickness: 15
-          }]
-        },
-        options: {
-          animation: false,
-          responsive: true,
-          maintainAspectRatio: false,
-          plugins: {
-            legend: { display: false },
-            tooltip: {
-              callbacks: { label: (context) => ` Cierre: ${context.raw}` }
-            }
-          },
-          scales: {
-            x: { grid: { display: false }, ticks: { font: { size: 9 } } },
-            y: { display: false, beginAtZero: true }
-          }
-        }
-      });
-
-      focusCharts.push(newChart);
-    }
   });
 }
 
