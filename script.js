@@ -384,8 +384,8 @@ function switchTab(tabName, evt) {
   if (tabSessions) tabSessions.style.display = 'none';
   if (tabDiagnostic) tabDiagnostic.style.display = 'none';
 
-  if (tabName === 'agents' && tabAgents) tabAgents.style.display = 'block';
   if (tabName === 'focus' && tabFocus) tabFocus.style.display = 'block';
+  if (tabName === 'agents' && tabAgents) tabAgents.style.display = 'block';
   if (tabName === 'leaders' && tabLeaders) tabLeaders.style.display = 'block';
   if (tabName === 'trends' && tabTrends) {
     tabTrends.style.display = 'block';
@@ -1303,7 +1303,125 @@ function renderTrendsLeaderTable() {
 
   const labels = monthKeys.map(m => m.charAt(0).toUpperCase() + m.slice(1));
   const supervisorsVentasMap = {};
+  const supervisorsMetaMap = {}; // Estrategia para calcular % Cumplimiento
   const supervisorsPromotoresMap = {};
+
+  // 1. Mapear la lista de supervisores
+  monthKeys.forEach(m => {
+    (allMonthsData[m] || []).forEach(row => {
+      const sup = getRowValue(row, 'SUPERVISOR');
+      if (sup) {
+        if (!supervisorsVentasMap[sup]) supervisorsVentasMap[sup] = {};
+        if (!supervisorsMetaMap[sup]) supervisorsMetaMap[sup] = {};
+        if (!supervisorsPromotoresMap[sup]) supervisorsPromotoresMap[sup] = {};
+      }
+    });
+  });
+
+  // 2. Acumular totales de Ventas y Meta por Supervisor por Mes
+  Object.keys(supervisorsVentasMap).forEach(sup => {
+    monthKeys.forEach(m => {
+      const rows = (allMonthsData[m] || []).filter(r => getRowValue(r, 'SUPERVISOR') === sup);
+      
+      const totalCierre = rows.reduce((sum, r) => sum + parseNum(getRowValue(r, 'CIERRE')), 0);
+      const totalMeta = rows.reduce((sum, r) => sum + parseNum(getRowValue(r, 'META')), 0);
+      
+      supervisorsVentasMap[sup][m] = totalCierre;
+      supervisorsMetaMap[sup][m] = totalMeta;
+
+      const uniquePromotores = new Set(rows.map(r => getRowValue(r, 'PROMOTOR')).filter(Boolean));
+      supervisorsPromotoresMap[sup][m] = uniquePromotores.size;
+    });
+  });
+
+  // 3. Crear datasets para el gráfico de líneas (% Cumplimiento)
+  const datasetsCumplimiento = Object.keys(supervisorsVentasMap).map((sup, idx) => {
+    const color = SUPERVISOR_COLORS[idx % SUPERVISOR_COLORS.length];
+    
+    const dataCumpl = monthKeys.map(m => {
+      const meta = supervisorsMetaMap[sup][m] || 0;
+      const cierre = supervisorsVentasMap[sup][m] || 0;
+      return meta > 0 ? parseFloat(((cierre / meta) * 100).toFixed(1)) : 0;
+    });
+
+    return {
+      label: sup,
+      data: dataCumpl,
+      borderColor: color,
+      backgroundColor: color,
+      borderWidth: 2.5,
+      tension: 0.3, // Curvatura suave de línea
+      fill: false,
+      pointRadius: 4,
+      pointHoverRadius: 7
+    };
+  });
+
+  // 4. Instanciar el gráfico de líneas
+  let canvasCumpl = document.getElementById('chartCumplimientoPorLider');
+  if (canvasCumpl) {
+    let existingChart = Chart.getChart(canvasCumpl);
+    if (existingChart) existingChart.destroy();
+
+    new Chart(canvasCumpl.getContext('2d'), {
+      type: 'line',
+      data: { labels, datasets: datasetsCumplimiento },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          title: {
+            display: true,
+            text: '% Cumplimiento Promedio por Supervisor y por Mes',
+            font: { size: 16, weight: 'bold' },
+            color: '#2c3e50',
+            padding: { top: 10, bottom: 20 }
+          },
+          legend: { 
+            position: 'bottom',
+            labels: { boxWidth: 12, padding: 15 }
+          },
+          tooltip: {
+            mode: 'index',
+            intersect: false,
+            callbacks: {
+              label: (context) => `${context.dataset.label}: ${context.raw}%`
+            }
+          },
+          annotation: {
+            annotations: {
+              metaLine: {
+                type: 'line',
+                yMin: 100,
+                yMax: 100,
+                borderColor: '#ef4444',
+                borderWidth: 2,
+                borderDash: [6, 6],
+                label: {
+                  display: true,
+                  content: 'Meta (100%)',
+                  position: 'end',
+                  backgroundColor: 'rgba(239, 68, 68, 0.8)',
+                  color: '#fff',
+                  font: { size: 10, weight: 'bold' }
+                }
+              }
+            }
+          }
+        },
+        scales: {
+          x: { grid: { display: false } },
+          y: { 
+            beginAtZero: true,
+            title: { display: true, text: 'Porcentaje de Cumplimiento (%)' },
+            ticks: {
+              callback: (value) => `${value}%`
+            }
+          }
+        }
+      }
+    });
+  }
 
   monthKeys.forEach(m => {
     (allMonthsData[m] || []).forEach(row => {

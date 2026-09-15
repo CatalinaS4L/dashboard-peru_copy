@@ -32,10 +32,11 @@
   </header>
 
   <main class="container">
-    <!-- 1. PESTAÑAS NAVEGACIÓN -->
+
+    <!-- PESTAÑAS NAVEGACIÓN -->
     <div class="tabs-container">
-      <button class="tab-button active" onclick="switchTab('agents', event)">Rendimiento por Agente</button>
-      <button class="tab-button" onclick="switchTab('focus', event)">Foco Rendimiento por Agente</button>
+      <button class="tab-button active" onclick="switchTab('focus', event)">Foco (Página Principal)</button>
+      <button class="tab-button" onclick="switchTab('agents', event)">Rendimiento por Agente</button>
       <button class="tab-button" onclick="switchTab('leaders', event)">Acumulativo por Líder</button>
       <button class="tab-button" onclick="switchTab('trends', event)">Tendencias Semanales</button>
       <button class="tab-button" onclick="switchTab('sessions', event)">Sesiones Trainer</button>
@@ -66,7 +67,7 @@
       </div>
     </section>
 
-    <!-- 2. BARRA DE FILTROS -->
+    <!-- BARRA DE FILTROS -->
     <section class="filters-card">
       <h2>Filtros</h2>
       <div class="filters-grid">
@@ -103,8 +104,32 @@
       </div>
     </section>
 
-    <!-- 3. TAB 1: Tabla de Agentes Completa -->
-    <section id="tab-agents" class="table-card tab-content active">
+    <!-- TAB FOCO: Foco (Página Principal) -->
+    <section id="tab-focus" class="table-card tab-content active">
+      <div class="table-header-flex">
+        <h2>Foco (Página Principal)</h2>
+        <div class="header-buttons" style="display: flex; gap: 10px;">
+          <button id="btn-critical-risk" type="button" class="btn-risk" onclick="toggleCriticalRiskFilter()">
+            ⚠️ Mostrar Agentes en Riesgo Crítico
+          </button>
+          <button id="btn-consistent-green" type="button" class="btn-green" onclick="toggleConsistentGreenFilter()">
+            🌟 Mostrar Agentes 2 Meses en Verde
+          </button>
+          <button id="btn-regular-performers" type="button" class="btn-regular" onclick="toggleRegularPerformersFilter()">
+            📊 Mostrar Agentes Regulares
+          </button>
+        </div>
+      </div>
+      <div class="table-wrapper">
+        <table id="focus-table">
+          <thead></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- TAB 1: Tabla de Agentes Completa -->
+    <section id="tab-agents" class="table-card tab-content" style="display: none;">
       <h2>Listado de Agentes</h2>
       <div class="table-wrapper">
         <table id="agents-table">
@@ -131,31 +156,7 @@
       </div>
     </section>
 
-    <!-- TAB FOCO: Foco Rendimiento por Agente -->
-    <section id="tab-focus" class="table-card tab-content" style="display: none;">
-      <div class="table-header-flex">
-        <h2>Foco Rendimiento por Agente</h2>
-        <div class="header-buttons" style="display: flex; gap: 10px;">
-          <button id="btn-critical-risk" type="button" class="btn-risk" onclick="toggleCriticalRiskFilter()">
-            ⚠️ Mostrar Agentes en Riesgo Crítico
-          </button>
-          <button id="btn-consistent-green" type="button" class="btn-green" onclick="toggleConsistentGreenFilter()">
-            🌟 Mostrar Agentes 2 Meses en Verde
-          </button>
-          <button id="btn-regular-performers" type="button" class="btn-regular" onclick="toggleRegularPerformersFilter()">
-            📊 Mostrar Agentes Regulares
-          </button>
-        </div>
-      </div>
-      <div class="table-wrapper">
-        <table id="focus-table">
-          <thead></thead>
-          <tbody></tbody>
-        </table>
-      </div>
-    </section>
-
-    <!-- 4. TAB 2: Acumulativos por Líder -->
+    <!-- TAB 2: Acumulativos por Líder -->
     <section id="tab-leaders" class="tab-content" style="display: none;">
       <div class="table-card" style="margin-bottom: 25px;">
         <h2>Acumulativo por Supervisor</h2>
@@ -204,7 +205,7 @@
       </div>
     </section>
 
-    <!-- 5. TAB 3: Tendencias Semanales -->
+    <!-- TAB 3: Tendencias Semanales -->
     <section id="tab-trends" class="tab-content" style="display: none;">
       <div class="subtabs-container" style="margin-bottom: 15px; display: flex; gap: 8px;">
         <button class="subtab-button active" onclick="switchSubTab('trends-agent', event)">Por Agente</button>
@@ -217,13 +218,21 @@
       </div>
     
       <div id="subtab-trends-leader" class="subtab-content" style="display: none;">
-        <!-- Nuevo gráfico: Promotores por Supervisor -->
+        <!-- Gráfico: Promotores por Supervisor -->
         <div class="chart-card" style="margin-bottom: 24px;">
           <div class="chart-wrapper">
             <canvas id="chartPromotoresPorLider"></canvas>
           </div>
         </div>
-        <!-- Gráfico existente: Ventas por Supervisor -->
+
+        <!-- Gráfico de líneas: Cumplimiento % por Supervisor -->
+        <div class="chart-card" style="margin-bottom: 24px;">
+          <div class="chart-wrapper">
+            <canvas id="chartCumplimientoPorLider"></canvas>
+          </div>
+        </div>
+
+        <!-- Gráfico: Ventas por Supervisor -->
         <div class="chart-card">
           <div class="chart-wrapper">
             <canvas id="chartAgentesPorLider"></canvas>
