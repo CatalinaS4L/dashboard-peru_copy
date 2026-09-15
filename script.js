@@ -1743,14 +1743,12 @@ async function exportCurrentViewToPDF() {
     const activeTabContainer = document.querySelector('.tab-content:not([style*="display: none"])') || document.body;
 
     // 2. Encabezado y título del PDF
-    doc.setFontSize(15);
+    doc.setFontSize(14);
     doc.setTextColor(30, 41, 59);
     doc.text(`Reporte Dashboard: ${tabTitle}`, 14, 12);
     
-
     // 3. CAPTURA DINÁMICA DE TODOS LOS FILTROS
-    // Busca todos los selects e inputs dentro del contenedor de filtros
-    const filterElements = document.querySelectorAll('.filters select, .filters input');
+    const filterElements = document.querySelectorAll('.filters-grid select, .filters-grid input');
     const activeFilters = [];
 
     filterElements.forEach(el => {
@@ -1759,7 +1757,7 @@ async function exportCurrentViewToPDF() {
                    || el.getAttribute('placeholder') 
                    || el.id;
 
-      let valueText = el.value.trim();
+      let valueText = el.value ? el.value.trim() : '';
       
       // Si el select tiene texto en la opción seleccionada, usamos ese texto
       if (el.tagName === 'SELECT' && el.selectedIndex >= 0) {
@@ -1771,17 +1769,24 @@ async function exportCurrentViewToPDF() {
       }
     });
 
+    // Agregar estados de botones de riesgo/foco si están activos
+    if (typeof onlyCriticalRisk !== 'undefined' && onlyCriticalRisk) activeFilters.push('Foco: Riesgo Crítico');
+    if (typeof onlyConsistentGreen !== 'undefined' && onlyConsistentGreen) activeFilters.push('Foco: 2 Meses Verde');
+    if (typeof onlyRegularPerformers !== 'undefined' && onlyRegularPerformers) activeFilters.push('Foco: Agentes Regulares');
+
     // Dibujar el resumen de todos los filtros en el PDF
     doc.setFontSize(8);
     doc.setTextColor(80);
-    const filterString = `Filtros aplicados: ${activeFilters.join('  |  ')}`;
+    const filterString = activeFilters.length > 0 
+      ? `Filtros aplicados: ${activeFilters.join('  |  ')}` 
+      : 'Filtros aplicados: Ninguno (Todos los datos)';
     
     // Dividir en varias líneas si la cadena de filtros es muy larga
     const splitFilters = doc.splitTextToSize(filterString, 269);
-    doc.text(splitFilters, 14, 18);
+    doc.text(splitFilters, 14, 17);
 
     // Calcular la posición Y de inicio para las imágenes en función de las líneas de filtros
-    let currentY = 18 + (splitFilters.length * 4) + 2;
+    let currentY = 17 + (splitFilters.length * 4) + 2;
 
     // 4. Captura visual de gráficos y KPIs (omite las tablas para evitar duplicación)
     const canvas = await html2canvas(activeTabContainer, {
@@ -1791,15 +1796,20 @@ async function exportCurrentViewToPDF() {
     });
 
     const imgData = canvas.toDataURL('image/png');
-    const imgWidth = 269; // Ancho disponible en A4 horizontal
+    const pdfWidth = 269; // Ancho disponible en A4 horizontal
     const imgHeight = (canvas.height * imgWidth) / canvas.width;
+    // Proporción real de la imagen capturada para mantener la escala original
+    const imgHeight = (canvas.height * pdfWidth) / canvas.width;
 
-    // Si la captura gráfica es muy alta, limitamos su tamaño vertical para dar espacio a las tablas
-    const maxImgHeight = 85;
-    const renderImgHeight = Math.min(imgHeight, maxImgHeight);
-
-    doc.addImage(imgData, 'PNG', 14, currentY, imgWidth, renderImgHeight);
-    currentY += renderImgHeight + 6;
+    // Control de salto de página si la gráfica es más alta que la hoja
+    if (currentY + imgHeight > 190) {
+      doc.addImage(imgData, 'PNG', 14, currentY, pdfWidth, 190 - currentY);
+      doc.addPage();
+      currentY = 15;
+    } else {
+      doc.addImage(imgData, 'PNG', 14, currentY, pdfWidth, imgHeight);
+      currentY += imgHeight + 6;
+    }
 
     // 5. INCLUSIÓN DE TODAS LAS TABLAS VISIBLES EN LA PESTAÑA ACTIVA
     const tablesInActiveTab = activeTabContainer.querySelectorAll('table');
@@ -1807,7 +1817,7 @@ async function exportCurrentViewToPDF() {
     if (tablesInActiveTab.length > 0) {
       tablesInActiveTab.forEach((tableEl, index) => {
         // Si la tabla no cabe en la página actual, crea una nueva página automáticamente
-        if (currentY > 170 && index > 0) {
+        if (currentY > 160 && index > 0) {
           doc.addPage();
           currentY = 15;
         }
@@ -1830,7 +1840,7 @@ async function exportCurrentViewToPDF() {
           startY: currentY,
           theme: 'grid',
           styles: { fontSize: 7, cellPadding: 1.5 },
-          headStyles: { fillColor: [255, 183, 51], textColor: [0, 0, 0], fontStyle: 'bold' },
+          headStyles: { fillColor: [6, 183, 6], textColor: [255, 255, 255], fontStyle: 'bold' },
           didParseCell: function(data) {
             // Limpia código HTML residual en las celdas
             if (data.cell.raw && typeof data.cell.raw === 'string') {
