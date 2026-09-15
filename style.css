@@ -457,19 +457,19 @@ th:hover {
   font-weight: 600;
   cursor: pointer;
   border: none;
-  background-color: #ffb733; /* Color naranja actual */
+  background-color: #ffb937; /* Color naranja actual */
   color: #000000;
   white-space: nowrap;
   transition: background-color 0.2s ease, opacity 0.2s ease;
 }
 
 .btn-filter:hover {
-  opacity: 0.9;
+  background-color: #f4a134;
 }
 
 /* Opcional: Si quieres un color distinto para el botón de PDF, cambia background-color aquí */
 .btn-pdf {
-  background-color: #ffb733; 
+  background-color: #ffb973; 
 }
 
 
