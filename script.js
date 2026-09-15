@@ -79,7 +79,7 @@ function parseSessionField(fullText, exactLabel) {
   // 1. Permite encontrar la etiqueta aunque le sigan palabras/espacios y opcionalmente ':' o '-'
   // 2. Captura todo hasta encontrar el inicio de otra etiqueta O un salto de línea con un emoji/etiqueta
   const regex = new RegExp(
-    `${escapedLabel}(?:\\s*[^:\\n]*[:\\-=])?\\s*([\\s\\S]*?)(?=(?:${lookaheadPattern})|\\n|$)`, 
+    `${escapedLabel}(?:\\s*[^:\\n]*[:\\-=])?\\s*([\\s\\S]*?)(?=(?:\\n\\s*)?(?:${lookaheadPattern})|$)`, 
     'i'
   );
   
