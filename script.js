@@ -1724,72 +1724,86 @@ function renderTrendsGlobalTable() {
   }
 }
 
-function exportCurrentViewToPDF() {
+async function exportCurrentViewToPDF() {
   const { jsPDF } = window.jspdf;
-  const doc = new jsPDF({ orientation: 'landscape' });
-
-  // 1. Obtener la pestaña activa
-  const activeTabBtn = document.querySelector('.tab-button.active');
-  const tabTitle = activeTabBtn ? activeTabBtn.textContent.trim() : 'Reporte';
+  const btnExport = document.getElementById('btn-export-pdf');
   
-  // 2. Encabezado del documento PDF
-  doc.setFontSize(16);
-  doc.text(`Reporte Dashboard: ${tabTitle}`, 14, 15);
-  doc.setFontSize(10);
-  doc.setTextColor(100);
-  
-  // Mostrar resumen de los filtros activos
-  const mes = document.getElementById('filter-mes')?.value || 'Todos';
-  const trainer = document.getElementById('filter-trainer')?.value || 'Todos';
-  const supervisor = document.getElementById('filter-supervisor')?.value || 'Todos';
-  doc.text(`Filtros -> Mes: ${mes} | Trainer: ${trainer} | Supervisor: ${supervisor}`, 14, 22);
+  // Feedback visual durante el procesamiento
+  btnExport.textContent = 'Generando...';
+  btnExport.disabled = true;
 
-  // 3. Determinar qué tabla o contenido exportar según la pestaña actual
-  let tableId = '';
-  
-  if (document.getElementById('tab-focus').style.display !== 'none') {
-    tableId = '#focus-table';
-  } else if (document.getElementById('tab-agents').style.display !== 'none') {
-    tableId = '#agents-table';
-  } else if (document.getElementById('tab-leaders').style.display !== 'none') {
-    tableId = '#supervisors-table'; // Exporta supervisores por defecto si está en Líderes
-  } else if (document.getElementById('tab-diagnostic').style.display !== 'none') {
-    tableId = '#diagnostic-table';
-  }
+  try {
+    const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
 
-  // 4. Generar la tabla en el PDF utilizando la tabla montada en el DOM (ya filtrada)
-  if (tableId && document.querySelector(tableId)) {
-    doc.autoTable({
-      html: tableId,
-      startY: 28,
-      theme: 'grid',
-      styles: { fontSize: 8, cellPadding: 2 },
-      headStyles: { fillColor: [6, 183, 6], textColor: [255, 255, 255], fontStyle: 'bold' },
-      didParseCell: function(data) {
-        // Limpia etiquetas HTML que puedan venir en celdas renderizadas (ej. badges o spans)
-        if (data.cell.raw && typeof data.cell.raw === 'string') {
-          data.cell.text = data.cell.raw.replace(/<[^>]*>/g, '').trim();
-        }
-      }
+    // 1. Identificar pestaña activa
+    const activeTabBtn = document.querySelector('.tab-button.active');
+    const tabTitle = activeTabBtn ? activeTabBtn.textContent.trim() : 'Reporte';
+    
+    // Obtener el contenedor visible de la pestaña actual
+    const activeTabContainer = document.querySelector('.tab-content:not([style*="display: none"])') || document.body;
+
+    // 2. Encabezado del PDF
+    doc.setFontSize(16);
+    doc.setTextColor(30, 41, 59);
+    doc.text(`Reporte Dashboard: ${tabTitle}`, 14, 15);
+    
+    doc.setFontSize(9);
+    doc.setTextColor(100);
+    const mes = document.getElementById('filter-mes')?.value || 'Todos';
+    const trainer = document.getElementById('filter-trainer')?.value || 'Todos';
+    doc.text(`Filtros aplicados -> Mes: ${mes} | Trainer: ${trainer}`, 14, 21);
+
+    // 3. Capturar gráficos e indicadores visuales de la pestaña activa usando html2canvas
+    const canvas = await html2canvas(activeTabContainer, {
+      scale: 2,
+      useCORS: true,
+      ignoreElements: (element) => element.tagName === 'TABLE' || element.classList.contains('filter-actions-container')
     });
-  } else {
-    doc.text("La pestaña actual no contiene una tabla exportable a PDF.", 14, 35);
-  }
 
-  // 5. Descargar archivo PDF con fecha actual
-  const filename = `Reporte_${tabTitle.replace(/\s+/g, '_')}_${new Date().toISOString().slice(0, 10)}.pdf`;
-  doc.save(filename);
+    const imgData = canvas.toDataURL('image/png');
+    const imgWidth = 269; // Ancho disponible en A4 horizontal
+    const imgHeight = (canvas.height * imgWidth) / canvas.width;
+
+    // Insertar la captura gráfica en la primera parte de la página
+    doc.addImage(imgData, 'PNG', 14, 25, imgWidth, Math.min(imgHeight, 100));
+
+    // 4. Buscar e insertar la tabla correspondiente con autoTable
+    let tableId = '';
+    if (document.getElementById('tab-focus')?.style.display !== 'none') tableId = '#focus-table';
+    else if (document.getElementById('tab-agents')?.style.display !== 'none') tableId = '#agents-table';
+    else if (document.getElementById('tab-leaders')?.style.display !== 'none') tableId = '#supervisors-table';
+    else if (document.getElementById('tab-diagnostic')?.style.display !== 'none') tableId = '#diagnostic-table';
+
+    const startTableY = Math.min(25 + imgHeight + 10, 130);
+
+    if (tableId && document.querySelector(tableId)) {
+      doc.autoTable({
+        html: tableId,
+        startY: startTableY,
+        theme: 'grid',
+        styles: { fontSize: 7, cellPadding: 2 },
+        headStyles: { fillColor: [255, 183, 51], textColor: [0, 0, 0], fontStyle: 'bold' }
+      });
+    }
+
+    // 5. Descargar PDF
+    const filename = `Reporte_${tabTitle.replace(/\s+/g, '_')}_${new Date().toISOString().slice(0, 10)}.pdf`;
+    doc.save(filename);
+
+  } catch (error) {
+    console.error('Error al exportar PDF:', error);
+  } finally {
+    btnExport.textContent = 'Exportar a PDF';
+    btnExport.disabled = false;
+  }
 }
 
-// Escuchar el click en el botón recién creado (dentro de DOMContentLoaded o al inicio)
 document.addEventListener('DOMContentLoaded', () => {
-  // ... tu código existente ...
   const btnExport = document.getElementById('btn-export-pdf');
   if (btnExport) {
     btnExport.addEventListener('click', exportCurrentViewToPDF);
   }
 });
-
 
 
 document.addEventListener('DOMContentLoaded', () => {

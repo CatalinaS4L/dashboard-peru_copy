@@ -442,3 +442,34 @@ th:hover {
   background-color: #2563eb;
 }
 
+/* Contenedor flexible para los dos botones en paralelo */
+.filter-actions-container {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  margin-top: auto; /* Para alinearse verticalmente con el input de al lado */
+}
+
+/* Estilo base compartido por ambos botones */
+.btn-filter {
+  padding: 10px 16px;
+  border-radius: 6px;
+  font-weight: 600;
+  cursor: pointer;
+  border: none;
+  background-color: #ffb733; /* Color naranja actual */
+  color: #000000;
+  white-space: nowrap;
+  transition: background-color 0.2s ease, opacity 0.2s ease;
+}
+
+.btn-filter:hover {
+  opacity: 0.9;
+}
+
+/* Opcional: Si quieres un color distinto para el botón de PDF, cambia background-color aquí */
+.btn-pdf {
+  background-color: #ffb733; 
+}
+
+
