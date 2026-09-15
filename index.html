@@ -38,8 +38,8 @@
       <button class="tab-button active" onclick="switchTab('focus', event)">Foco (Página Principal)</button>
       <button class="tab-button" onclick="switchTab('agents', event)">Rendimiento por Agente</button>
       <button class="tab-button" onclick="switchTab('leaders', event)">Acumulativo por Líder</button>
-      <button class="tab-button" onclick="switchTab('trends', event)">Tendencias Semanales</button>
-      <button class="tab-button" onclick="switchTab('sessions', event)">Sesiones Trainer</button>
+      <button class="tab-button" onclick="switchTab('trends', event)">Tendencias</button>
+      <button class="tab-button" onclick="switchTab('sessions', event)">Sesiones Trainers</button>
       <button class="tab-button" onclick="switchTab('diagnostic', event)">Monitoreo Diagnóstico</button>
     </div>
 
@@ -205,7 +205,7 @@
       </div>
     </section>
 
-    <!-- TAB 3: Tendencias Semanales -->
+    <!-- TAB 3: Tendencias -->
     <section id="tab-trends" class="tab-content" style="display: none;">
       <div class="subtabs-container" style="margin-bottom: 15px; display: flex; gap: 8px;">
         <button class="subtab-button active" onclick="switchSubTab('trends-agent', event)">Por Agente</button>
@@ -265,7 +265,7 @@
       </div>
     </section>
 
-    <!-- TAB 4: Sesiones Trainer -->
+    <!-- TAB 4: Sesiones Trainers -->
     <section id="tab-sessions" class="tab-content" style="display: none;">
       <div id="trainer-sessions-container" class="sessions-cards-grid"></div>
     </section>

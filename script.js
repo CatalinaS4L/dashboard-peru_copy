@@ -1298,30 +1298,39 @@ function renderTrendsLeaderTable() {
   const container = document.getElementById('subtab-trends-leader');
   if (!container) return;
 
+// 1. Obtener valores actuales de los filtros
+  const searchVal = document.getElementById('filter-search')?.value.toLowerCase().trim() || '';
+  const trainerVal = document.getElementById('filter-trainer')?.value || '';
+  const coordinadorVal = document.getElementById('filter-coordinador')?.value || '';
+  const statusVal = document.getElementById('filter-status')?.value || '';
+
   const monthKeys = Object.keys(allMonthsData);
   if (monthKeys.length === 0) return;
 
   const labels = monthKeys.map(m => m.charAt(0).toUpperCase() + m.slice(1));
   const supervisorsVentasMap = {};
-  const supervisorsMetaMap = {}; // Estrategia para calcular % Cumplimiento
+  const supervisorsMetaMap = {};
   const supervisorsPromotoresMap = {};
 
-  // 1. Mapear la lista de supervisores
+
+  // 2. Mapear la lista de supervisores filtrados
   monthKeys.forEach(m => {
     (allMonthsData[m] || []).forEach(row => {
-      const sup = getRowValue(row, 'SUPERVISOR');
-      if (sup) {
-        if (!supervisorsVentasMap[sup]) supervisorsVentasMap[sup] = {};
-        if (!supervisorsMetaMap[sup]) supervisorsMetaMap[sup] = {};
-        if (!supervisorsPromotoresMap[sup]) supervisorsPromotoresMap[sup] = {};
+      if (filterRow(row)) {
+        const sup = getRowValue(row, 'SUPERVISOR');
+        if (sup) {
+          if (!supervisorsVentasMap[sup]) supervisorsVentasMap[sup] = {};
+          if (!supervisorsMetaMap[sup]) supervisorsMetaMap[sup] = {};
+          if (!supervisorsPromotoresMap[sup]) supervisorsPromotoresMap[sup] = {};
+        }
       }
     });
   });
 
-  // 2. Acumular totales de Ventas y Meta por Supervisor por Mes
+  // 3. Acumular totales aplicando el filtro
   Object.keys(supervisorsVentasMap).forEach(sup => {
     monthKeys.forEach(m => {
-      const rows = (allMonthsData[m] || []).filter(r => getRowValue(r, 'SUPERVISOR') === sup);
+      const rows = (allMonthsData[m] || []).filter(r => getRowValue(r, 'SUPERVISOR') === sup && filterRow(r));
       
       const totalCierre = rows.reduce((sum, r) => sum + parseNum(getRowValue(r, 'CIERRE')), 0);
       const totalMeta = rows.reduce((sum, r) => sum + parseNum(getRowValue(r, 'META')), 0);
@@ -1334,7 +1343,7 @@ function renderTrendsLeaderTable() {
     });
   });
 
-  // 3. Crear datasets para el gráfico de líneas (% Cumplimiento)
+  // 4. Crear datasets para el gráfico de líneas (% Cumplimiento)
   const datasetsCumplimiento = Object.keys(supervisorsVentasMap).map((sup, idx) => {
     const color = SUPERVISOR_COLORS[idx % SUPERVISOR_COLORS.length];
     
@@ -1357,7 +1366,7 @@ function renderTrendsLeaderTable() {
     };
   });
 
-  // 4. Instanciar el gráfico de líneas
+  // 5. Instanciar el gráfico de líneas
   let canvasCumpl = document.getElementById('chartCumplimientoPorLider');
   if (canvasCumpl) {
     let existingChart = Chart.getChart(canvasCumpl);
@@ -1656,52 +1665,57 @@ function renderTrendsGlobalTable() {
   const container = document.getElementById('subtab-trends-global');
   if (!container) return;
 
+  // 1. Obtener valores de los filtros
+  const searchVal = document.getElementById('filter-search')?.value.toLowerCase().trim() || '';
+  const trainerVal = document.getElementById('filter-trainer')?.value || '';
+  const supervisorVal = document.getElementById('filter-supervisor')?.value || '';
+  const coordinadorVal = document.getElementById('filter-coordinador')?.value || '';
+  const statusVal = document.getElementById('filter-status')?.value || '';
+
   const monthKeys = Object.keys(allMonthsData);
   if (monthKeys.length === 0) return;
 
   const labels = monthKeys.map(m => m.charAt(0).toUpperCase() + m.slice(1));
-  
-  // --- ESTRUCTURAS DE DATOS ---
   const totalVentas = [];
   const totalMeta = [];
   const semanasAcumuladas = { V1: 0, V2: 0, V3: 0, V4: 0, V5: 0 };
-  
-  // Conteo para semáforo por mes
-  const semaforoPorMes = {
-    rojo: [],
-    amarillo: [],
-    verde: []
-  };
+  const semaforoPorMes = { rojo: [], amarillo: [], verde: [] };
 
   monthKeys.forEach(m => {
-    const rows = allMonthsData[m] || [];
+    // 2. Filtrar filas según la barra de controles
+    const rawRows = allMonthsData[m] || [];
+    const rows = rawRows.filter(row => {
+      const agent = getRowValue(row, 'PROMOTOR').toLowerCase();
+      const matchSearch = !searchVal || agent.includes(searchVal);
+      const matchTrainer = !trainerVal || getRowValue(row, 'TRAINER') === trainerVal;
+      const matchSupervisor = !supervisorVal || getRowValue(row, 'SUPERVISOR') === supervisorVal;
+      const matchCoordinador = !coordinadorVal || getRowValue(row, 'COORDINADOR') === coordinadorVal;
+      const matchStatus = !statusVal || getRowValue(row, 'STATUS AGENTE') === statusVal;
+      return matchSearch && matchTrainer && matchSupervisor && matchCoordinador && matchStatus;
+    });
     
-    // 1. Datos Ventas vs Meta
+    // 3. Datos Ventas vs Meta
     const ventas = rows.reduce((sum, r) => sum + parseNum(getRowValue(r, 'CIERRE')), 0);
     const meta = rows.reduce((sum, r) => sum + parseNum(getRowValue(r, 'META')), 0);
     totalVentas.push(ventas);
     totalMeta.push(meta);
 
-    // 2. Acumulado de Ventas por Semana
+    // 4. Acumulado de Ventas por Semana
     ['V1', 'V2', 'V3', 'V4', 'V5'].forEach(vKey => {
       const sumaSemana = rows.reduce((sum, r) => sum + parseNum(getRowValue(r, vKey)), 0);
       semanasAcumuladas[vKey] += sumaSemana;
     });
 
-    // 3. Distribución del Semáforo (Rojo, Amarillo, Verde)
+    // 5. Distribución del Semáforo
     let cRojo = 0, cAmarillo = 0, cVerde = 0;
     rows.forEach(r => {
       const v = parseNum(getRowValue(r, 'CIERRE'));
       const me = parseNum(getRowValue(r, 'META'));
       const pct = me > 0 ? (v / me) * 100 : 0;
 
-      if (pct < 50) {
-        cRojo++;
-      } else if (pct < 90) {
-        cAmarillo++;
-      } else {
-        cVerde++;
-      }
+      if (pct < 50) cRojo++;
+      else if (pct < 90) cAmarillo++;
+      else cVerde++;
     });
 
     semaforoPorMes.rojo.push(cRojo);
