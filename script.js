@@ -75,11 +75,13 @@ function parseSessionField(fullText, exactLabel) {
   const escapedLabel = exactLabel.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
   const lookaheadPattern = EXACT_KEYWORDS.join('|');
   
-  // Expresión regular ajustada:
-  // 1. Permite encontrar la etiqueta aunque le sigan palabras/espacios y opcionalmente ':' o '-'
-  // 2. Captura todo hasta encontrar el inicio de otra etiqueta O un salto de línea con un emoji/etiqueta
+  // Expresión regular optimizada:
+  // 1. ${escapedLabel}: Busca el texto clave exacto (ej. "🛡️ Objeciones").
+  // 2. (?:\\s*[:\\-=])?: Consume ÚNICAMENTE el primer separador (:, -, =) inmediatamente pegado al título si existe.
+  // 3. ([\\s\\S]*?): Captura todo el contenido (incluyendo cualquier ":" adicional dentro del texto).
+  // 4. (?=(?:\\n\\s*)?(?:${lookaheadPattern})|$): Detiene la captura solo si se topa con otra palabra clave o el final del texto.
   const regex = new RegExp(
-    `${escapedLabel}(?:\\s*[^:\\n]*[:\\-=])?\\s*([\\s\\S]*?)(?=(?:\\n\\s*)?(?:${lookaheadPattern})|$)`, 
+    `${escapedLabel}(?:\\s*[:\\-=])?\\s*([\\s\\S]*?)(?=(?:\\n\\s*)?(?:${lookaheadPattern})|$)`, 
     'i'
   );
   
