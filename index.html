@@ -16,6 +16,11 @@
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <!-- Plugin de Anotaciones para las líneas objetivo -->
   <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@2.1.2/dist/chartjs-plugin-annotation.min.js"></script>
+
+  <!-- Librerías para exportar a PDF -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
+
 </head>
 <body>
 
@@ -100,6 +105,7 @@
         <div class="filter-actions">
           <label>&nbsp;</label>
           <button id="btn-reset" type="button">Limpiar Filtros</button>
+          <button id="btn-export-pdf" type="button" class="btn-pdf">Exportar a PDF</button>
         </div>
       </div>
     </section>

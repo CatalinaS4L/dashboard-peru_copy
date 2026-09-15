@@ -1724,6 +1724,74 @@ function renderTrendsGlobalTable() {
   }
 }
 
+function exportCurrentViewToPDF() {
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ orientation: 'landscape' });
+
+  // 1. Obtener la pestaña activa
+  const activeTabBtn = document.querySelector('.tab-button.active');
+  const tabTitle = activeTabBtn ? activeTabBtn.textContent.trim() : 'Reporte';
+  
+  // 2. Encabezado del documento PDF
+  doc.setFontSize(16);
+  doc.text(`Reporte Dashboard: ${tabTitle}`, 14, 15);
+  doc.setFontSize(10);
+  doc.setTextColor(100);
+  
+  // Mostrar resumen de los filtros activos
+  const mes = document.getElementById('filter-mes')?.value || 'Todos';
+  const trainer = document.getElementById('filter-trainer')?.value || 'Todos';
+  const supervisor = document.getElementById('filter-supervisor')?.value || 'Todos';
+  doc.text(`Filtros -> Mes: ${mes} | Trainer: ${trainer} | Supervisor: ${supervisor}`, 14, 22);
+
+  // 3. Determinar qué tabla o contenido exportar según la pestaña actual
+  let tableId = '';
+  
+  if (document.getElementById('tab-focus').style.display !== 'none') {
+    tableId = '#focus-table';
+  } else if (document.getElementById('tab-agents').style.display !== 'none') {
+    tableId = '#agents-table';
+  } else if (document.getElementById('tab-leaders').style.display !== 'none') {
+    tableId = '#supervisors-table'; // Exporta supervisores por defecto si está en Líderes
+  } else if (document.getElementById('tab-diagnostic').style.display !== 'none') {
+    tableId = '#diagnostic-table';
+  }
+
+  // 4. Generar la tabla en el PDF utilizando la tabla montada en el DOM (ya filtrada)
+  if (tableId && document.querySelector(tableId)) {
+    doc.autoTable({
+      html: tableId,
+      startY: 28,
+      theme: 'grid',
+      styles: { fontSize: 8, cellPadding: 2 },
+      headStyles: { fillColor: [6, 183, 6], textColor: [255, 255, 255], fontStyle: 'bold' },
+      didParseCell: function(data) {
+        // Limpia etiquetas HTML que puedan venir en celdas renderizadas (ej. badges o spans)
+        if (data.cell.raw && typeof data.cell.raw === 'string') {
+          data.cell.text = data.cell.raw.replace(/<[^>]*>/g, '').trim();
+        }
+      }
+    });
+  } else {
+    doc.text("La pestaña actual no contiene una tabla exportable a PDF.", 14, 35);
+  }
+
+  // 5. Descargar archivo PDF con fecha actual
+  const filename = `Reporte_${tabTitle.replace(/\s+/g, '_')}_${new Date().toISOString().slice(0, 10)}.pdf`;
+  doc.save(filename);
+}
+
+// Escuchar el click en el botón recién creado (dentro de DOMContentLoaded o al inicio)
+document.addEventListener('DOMContentLoaded', () => {
+  // ... tu código existente ...
+  const btnExport = document.getElementById('btn-export-pdf');
+  if (btnExport) {
+    btnExport.addEventListener('click', exportCurrentViewToPDF);
+  }
+});
+
+
+
 document.addEventListener('DOMContentLoaded', () => {
   populateMonthSelector();
   
