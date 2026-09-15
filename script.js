@@ -11,8 +11,6 @@ const MONTH_URLS = {
   agosto: `https://docs.google.com/spreadsheets/d/e/2PACX-1vRlckyPnPqEGlq9J9wk_1HwxkfHQqt6X4wHxNtPpRg-RRATO3asLAigUxUyin9D1OS0joXIpJkG8-tL/pub?gid=1822972942&single=true&output=csv`
 };
 
-
-// Paleta de colores únicos para supervisores
 const SUPERVISOR_COLORS = [
   '#2563eb', '#10b981', '#f59e0b', '#ef4444', 
   '#8b5cf6', '#ec4899', '#06b6d4', '#84cc16', 
@@ -40,49 +38,51 @@ let sortState = {
 function getRowValue(row, keyName) {
   if (!row) return '';
   const targetKey = keyName.trim().toUpperCase();
-  
   const actualKey = Object.keys(row).find(k => {
     if (!k) return false;
     const cleanKey = k.replace(/[\r\n]/g, '').trim().toUpperCase();
     return cleanKey === targetKey || cleanKey.startsWith(targetKey);
   });
-  
   return actualKey ? row[actualKey].toString().trim() : '';
 }
 
+function filterRow(row) {
+  const searchVal = document.getElementById('filter-search')?.value.toLowerCase().trim() || '';
+  const trainerVal = document.getElementById('filter-trainer')?.value || '';
+  const supervisorVal = document.getElementById('filter-supervisor')?.value || '';
+  const coordinadorVal = document.getElementById('filter-coordinador')?.value || '';
+  const statusVal = document.getElementById('filter-status')?.value || '';
+
+  const agent = getRowValue(row, 'PROMOTOR').toLowerCase();
+  const matchSearch = !searchVal || agent.includes(searchVal);
+  const matchTrainer = !trainerVal || getRowValue(row, 'TRAINER') === trainerVal;
+  const matchSupervisor = !supervisorVal || getRowValue(row, 'SUPERVISOR') === supervisorVal;
+  const matchCoordinador = !coordinadorVal || getRowValue(row, 'COORDINADOR') === coordinadorVal;
+  const matchStatus = !statusVal || getRowValue(row, 'STATUS AGENTE') === statusVal;
+
+  return matchSearch && matchTrainer && matchSupervisor && matchCoordinador && matchStatus;
+}
+
 const EXACT_KEYWORDS = [
-  "📅 Fecha",
-  "🔗 URLTr:",
-  "🗣️ Speech:",
-  "📚 Producto:",
-  "🛡️ Objeciones:",
-  "🤝 Cierre:",
-  "📌 Acuerdos \\+ Estado:"
+  "📅 Fecha", "🔗 URLTr:", "🗣️ Speech:", "📚 Producto:", "🛡️ Objeciones:", "🤝 Cierre:", "📌 Acuerdos \\+ Estado:"
 ];
 
 function parseSessionField(fullText, exactLabel) {
   if (!fullText) return '-';
-
   const escapedLabel = exactLabel.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
   const lookaheadPattern = EXACT_KEYWORDS.join('|');
-
-  const regex = new RegExp(
-    `${escapedLabel}\\s*[:\\-=]?\\s*([\\s\\S]*?)(?=(?:${lookaheadPattern})\\s*[:\\-=]|$|\n)`
-  );
-  
+  const regex = new RegExp(`${escapedLabel}\\s*[:\\-=]?\\s*([\\s\\S]*?)(?=(?:${lookaheadPattern})\\s*[:\\-=]|$|\n)`);
   const match = fullText.match(regex);
   if (match && match[1]) {
     const val = match[1].trim();
     return val !== '' ? val : '-';
   }
-
   return '-';
 }
 
 function populateMonthSelector() {
   const selectMes = document.getElementById('filter-mes');
   if (!selectMes) return;
-
   Object.keys(MONTH_URLS).forEach(monthKey => {
     if (!selectMes.querySelector(`option[value="${monthKey}"]`)) {
       const option = document.createElement('option');
@@ -114,18 +114,15 @@ async function fetchCurrentMonthData() {
       error: () => resolve()
     });
   });
-
   loadDashboardData();
 }
 
 async function preloadAllMonths() {
   const monthKeys = Object.keys(MONTH_URLS);
   const lastMonthKey = monthKeys[monthKeys.length - 1];
-
   const HISTORICAL_CACHE_KEY = 'dashboard_historical_months_v2';
   let cachedHistorical = localStorage.getItem(HISTORICAL_CACHE_KEY);
   let historicalData = cachedHistorical ? JSON.parse(cachedHistorical) : {};
-
   const missingHistorical = monthKeys.filter(m => m !== lastMonthKey && !historicalData[m]);
 
   if (missingHistorical.length > 0) {
@@ -211,10 +208,14 @@ function renderAllTables() {
   const tabTrends = document.getElementById('tab-trends');
   if (tabTrends && tabTrends.style.display !== 'none') {
     const activeSubtab = document.querySelector('#tab-trends .subtab-button.active');
-    if (activeSubtab && activeSubtab.textContent.includes('Líder')) {
-      renderTrendsLeaderTable();
-    } else {
-      renderTrendsTable();
+    if (activeSubtab) {
+      if (activeSubtab.textContent.includes('Líder')) {
+        renderTrendsLeaderTable();
+      } else if (activeSubtab.textContent.includes('Global')) {
+        renderTrendsGlobalTable();
+      } else {
+        renderTrendsTable();
+      }
     }
   }
 
@@ -263,12 +264,19 @@ function fillSelect(elementId, options) {
   const select = document.getElementById(elementId);
   if (!select) return;
 
+  const currentVal = select.value;
+  select.innerHTML = '<option value="">Todos</option>';
+
   options.sort().forEach(opt => {
     const option = document.createElement('option');
     option.value = opt;
     option.textContent = opt;
     select.appendChild(option);
   });
+
+  if (options.includes(currentVal)) {
+    select.value = currentVal;
+  }
 
   if (!select.dataset.hasListener) {
     select.addEventListener('change', filterData);
@@ -528,7 +536,6 @@ function renderFocusTable(data) {
   thead.innerHTML = '';
   tbody.innerHTML = '';
 
-  // Limpiar instancias previas de gráficos
   focusCharts.forEach(chart => chart.destroy());
   focusCharts = [];
 
@@ -542,7 +549,6 @@ function renderFocusTable(data) {
 
   const currentSort = sortState['focus-table'] || { column: null, isAsc: true };
 
-  // 1. Construir encabeza sin la columna de Gráficos
   let headerHTML = `<tr><th onclick="handleSort('focus-table', 'PROMOTOR')" style="cursor:pointer;">Agente</th>`;
   monthsToDisplay.forEach(m => {
     const mesFormatted = m.charAt(0).toUpperCase() + m.slice(1);
@@ -555,7 +561,6 @@ function renderFocusTable(data) {
   headerHTML += `</tr>`;
   thead.innerHTML = headerHTML;
 
-  // 2. Mapear datos completos de todos los meses
   const fullAgentsMap = {};
   const monthKeys = Object.keys(allMonthsData);
   const lastMonthKey = monthKeys[monthKeys.length - 1];
@@ -578,7 +583,6 @@ function renderFocusTable(data) {
         cumplimiento: getRowValue(row, 'CUMPLIMIENTO MES') || '-'
       };
 
-      // Guardar status en el último mes activo registrado
       if (m === lastMonthKey) {
         fullAgentsMap[agentName].lastMonthStatus = getRowValue(row, 'STATUS AGENTE').toUpperCase();
       }
@@ -597,7 +601,6 @@ function renderFocusTable(data) {
 
   let agentsList = Object.values(agentsMap);
 
-  // 3. Aplicar filtros con validación de estado ACTIVO para Riesgo Crítico
   if (onlyCriticalRisk) {
     agentsList = agentsList.filter(agent => {
       const isActive = agent.lastMonthStatus.includes('ACTIVO');
@@ -626,7 +629,6 @@ function renderFocusTable(data) {
     return;
   }
 
-  // 4. Ordenamiento
   if (currentSort.column) {
     const colKey = currentSort.column;
     const isAsc = currentSort.isAsc;
@@ -653,7 +655,6 @@ function renderFocusTable(data) {
     });
   }
 
-  // 5. Renderizado de celdas de la tabla
   agentsList.forEach((agent) => {
     const tr = document.createElement('tr');
     let rowHTML = `<td><strong>${agent.agentName}</strong></td>`;
@@ -777,12 +778,6 @@ function renderTrendsTable() {
   agentTrendsChartInstances = {};
   container.innerHTML = '';
 
-  const searchVal = document.getElementById('filter-search')?.value.toLowerCase().trim() || '';
-  const trainerVal = document.getElementById('filter-trainer')?.value;
-  const supervisorVal = document.getElementById('filter-supervisor')?.value;
-  const coordinadorVal = document.getElementById('filter-coordinador')?.value;
-  const statusVal = document.getElementById('filter-status')?.value;
-
   const agentsHistory = {};
   const monthKeys = Object.keys(allMonthsData);
 
@@ -793,13 +788,7 @@ function renderTrendsTable() {
       const agent = getRowValue(row, 'PROMOTOR');
       if (!agent) return;
 
-      const matchSearch = !searchVal || agent.toLowerCase().includes(searchVal);
-      const matchTrainer = !trainerVal || getRowValue(row, 'TRAINER') === trainerVal;
-      const matchSupervisor = !supervisorVal || getRowValue(row, 'SUPERVISOR') === supervisorVal;
-      const matchCoordinador = !coordinadorVal || getRowValue(row, 'COORDINADOR') === coordinadorVal;
-      const matchStatus = !statusVal || getRowValue(row, 'STATUS AGENTE') === statusVal;
-
-      if (matchSearch && matchTrainer && matchSupervisor && matchCoordinador && matchStatus) {
+      if (filterRow(row)) {
         if (!agentsHistory[agent]) {
           agentsHistory[agent] = {
             trainer: getRowValue(row, 'TRAINER') || '-',
@@ -1298,12 +1287,6 @@ function renderTrendsLeaderTable() {
   const container = document.getElementById('subtab-trends-leader');
   if (!container) return;
 
-// 1. Obtener valores actuales de los filtros
-  const searchVal = document.getElementById('filter-search')?.value.toLowerCase().trim() || '';
-  const trainerVal = document.getElementById('filter-trainer')?.value || '';
-  const coordinadorVal = document.getElementById('filter-coordinador')?.value || '';
-  const statusVal = document.getElementById('filter-status')?.value || '';
-
   const monthKeys = Object.keys(allMonthsData);
   if (monthKeys.length === 0) return;
 
@@ -1312,8 +1295,6 @@ function renderTrendsLeaderTable() {
   const supervisorsMetaMap = {};
   const supervisorsPromotoresMap = {};
 
-
-  // 2. Mapear la lista de supervisores filtrados
   monthKeys.forEach(m => {
     (allMonthsData[m] || []).forEach(row => {
       if (filterRow(row)) {
@@ -1327,7 +1308,6 @@ function renderTrendsLeaderTable() {
     });
   });
 
-  // 3. Acumular totales aplicando el filtro
   Object.keys(supervisorsVentasMap).forEach(sup => {
     monthKeys.forEach(m => {
       const rows = (allMonthsData[m] || []).filter(r => getRowValue(r, 'SUPERVISOR') === sup && filterRow(r));
@@ -1343,7 +1323,6 @@ function renderTrendsLeaderTable() {
     });
   });
 
-  // 4. Crear datasets para el gráfico de líneas (% Cumplimiento)
   const datasetsCumplimiento = Object.keys(supervisorsVentasMap).map((sup, idx) => {
     const color = SUPERVISOR_COLORS[idx % SUPERVISOR_COLORS.length];
     
@@ -1359,14 +1338,13 @@ function renderTrendsLeaderTable() {
       borderColor: color,
       backgroundColor: color,
       borderWidth: 2.5,
-      tension: 0.3, // Curvatura suave de línea
+      tension: 0.3,
       fill: false,
       pointRadius: 4,
       pointHoverRadius: 7
     };
   });
 
-  // 5. Instanciar el gráfico de líneas
   let canvasCumpl = document.getElementById('chartCumplimientoPorLider');
   if (canvasCumpl) {
     let existingChart = Chart.getChart(canvasCumpl);
@@ -1431,28 +1409,6 @@ function renderTrendsLeaderTable() {
       }
     });
   }
-
-  monthKeys.forEach(m => {
-    (allMonthsData[m] || []).forEach(row => {
-      const sup = getRowValue(row, 'SUPERVISOR');
-      if (sup) {
-        if (!supervisorsVentasMap[sup]) supervisorsVentasMap[sup] = {};
-        if (!supervisorsPromotoresMap[sup]) supervisorsPromotoresMap[sup] = {};
-      }
-    });
-  });
-
-  Object.keys(supervisorsVentasMap).forEach(sup => {
-    monthKeys.forEach(m => {
-      const rows = (allMonthsData[m] || []).filter(r => getRowValue(r, 'SUPERVISOR') === sup);
-      
-      const totalCierre = rows.reduce((sum, r) => sum + parseNum(getRowValue(r, 'CIERRE')), 0);
-      supervisorsVentasMap[sup][m] = totalCierre;
-
-      const uniquePromotores = new Set(rows.map(r => getRowValue(r, 'PROMOTOR')).filter(Boolean));
-      supervisorsPromotoresMap[sup][m] = uniquePromotores.size;
-    });
-  });
 
   const datasetsVentas = Object.keys(supervisorsVentasMap).map((sup, idx) => {
     const color = SUPERVISOR_COLORS[idx % SUPERVISOR_COLORS.length];
@@ -1566,7 +1522,6 @@ function renderHeaderSummary() {
   const lastMonthData = allMonthsData[lastMonthKey] || [];
   const lastMonthFormatted = lastMonthKey.charAt(0).toUpperCase() + lastMonthKey.slice(1);
 
-  // 1. Identificar únicamente Promotores con STATUS AGENTE = 'ACTIVO' en el último mes
   const activeAgentsLastMonth = new Set(
     lastMonthData
       .filter(row => {
@@ -1579,7 +1534,6 @@ function renderHeaderSummary() {
 
   const totalActive = activeAgentsLastMonth.size;
 
-  // 2. Construir mapa de datos históricos por agente
   const fullAgentsMap = {};
   Object.keys(allMonthsData).forEach(m => {
     allMonthsData[m].forEach(row => {
@@ -1596,7 +1550,6 @@ function renderHeaderSummary() {
     });
   });
 
-  // 3. Evaluar Riesgo Crítico y Consistentes Verde SOLO entre los agentes ACTIVOS del último mes
   let countCriticalRisk = 0;
   let countConsistentGreen = 0;
 
@@ -1612,7 +1565,6 @@ function renderHeaderSummary() {
     }
   });
 
-  // 4. Calcular Promedio de Calidad General ÚNICAMENTE para el último mes (ignorando notas vacías)
   let sumDiagnostic = 0;
   let countDiagnostic = 0;
 
@@ -1629,7 +1581,6 @@ function renderHeaderSummary() {
 
   const avgQuality = countDiagnostic > 0 ? (sumDiagnostic / countDiagnostic).toFixed(1) : '0.0';
 
-  // 5. Renderizar los valores en los elementos DOM del Header
   const elActive = document.getElementById('kpi-active-agents');
   const elActiveMonth = document.getElementById('kpi-active-month');
   const elRisk = document.getElementById('kpi-critical-risk');
@@ -1643,34 +1594,9 @@ function renderHeaderSummary() {
   if (elQuality) elQuality.textContent = `${avgQuality}%`;
 }
 
-document.addEventListener('DOMContentLoaded', () => {
-  populateMonthSelector();
-  
-  const searchInput = document.getElementById('filter-search');
-  if (searchInput) {
-    searchInput.addEventListener('input', filterData);
-  }
-
-  document.getElementById('filter-mes').addEventListener('change', loadDashboardData);
-  document.getElementById('btn-reset').addEventListener('click', resetAllFilters);
-  
-  preloadAllMonths();
-
-  setInterval(() => {
-    fetchCurrentMonthData();
-  }, 120000);
-});
-
 function renderTrendsGlobalTable() {
   const container = document.getElementById('subtab-trends-global');
   if (!container) return;
-
-  // 1. Obtener valores de los filtros
-  const searchVal = document.getElementById('filter-search')?.value.toLowerCase().trim() || '';
-  const trainerVal = document.getElementById('filter-trainer')?.value || '';
-  const supervisorVal = document.getElementById('filter-supervisor')?.value || '';
-  const coordinadorVal = document.getElementById('filter-coordinador')?.value || '';
-  const statusVal = document.getElementById('filter-status')?.value || '';
 
   const monthKeys = Object.keys(allMonthsData);
   if (monthKeys.length === 0) return;
@@ -1682,31 +1608,19 @@ function renderTrendsGlobalTable() {
   const semaforoPorMes = { rojo: [], amarillo: [], verde: [] };
 
   monthKeys.forEach(m => {
-    // 2. Filtrar filas según la barra de controles
     const rawRows = allMonthsData[m] || [];
-    const rows = rawRows.filter(row => {
-      const agent = getRowValue(row, 'PROMOTOR').toLowerCase();
-      const matchSearch = !searchVal || agent.includes(searchVal);
-      const matchTrainer = !trainerVal || getRowValue(row, 'TRAINER') === trainerVal;
-      const matchSupervisor = !supervisorVal || getRowValue(row, 'SUPERVISOR') === supervisorVal;
-      const matchCoordinador = !coordinadorVal || getRowValue(row, 'COORDINADOR') === coordinadorVal;
-      const matchStatus = !statusVal || getRowValue(row, 'STATUS AGENTE') === statusVal;
-      return matchSearch && matchTrainer && matchSupervisor && matchCoordinador && matchStatus;
-    });
-    
-    // 3. Datos Ventas vs Meta
+    const rows = rawRows.filter(row => filterRow(row));
+
     const ventas = rows.reduce((sum, r) => sum + parseNum(getRowValue(r, 'CIERRE')), 0);
     const meta = rows.reduce((sum, r) => sum + parseNum(getRowValue(r, 'META')), 0);
     totalVentas.push(ventas);
     totalMeta.push(meta);
 
-    // 4. Acumulado de Ventas por Semana
     ['V1', 'V2', 'V3', 'V4', 'V5'].forEach(vKey => {
       const sumaSemana = rows.reduce((sum, r) => sum + parseNum(getRowValue(r, vKey)), 0);
       semanasAcumuladas[vKey] += sumaSemana;
     });
 
-    // 5. Distribución del Semáforo
     let cRojo = 0, cAmarillo = 0, cVerde = 0;
     rows.forEach(r => {
       const v = parseNum(getRowValue(r, 'CIERRE'));
@@ -1723,9 +1637,6 @@ function renderTrendsGlobalTable() {
     semaforoPorMes.verde.push(cVerde);
   });
 
-  // ==========================================
-  // GRÁFICO 1: VENTAS VS META
-  // ==========================================
   let canvasGlobal = document.getElementById('chartGlobalVentas');
   if (canvasGlobal) {
     let existingChart = Chart.getChart(canvasGlobal);
@@ -1752,9 +1663,6 @@ function renderTrendsGlobalTable() {
     });
   }
 
-  // ==========================================
-  // GRÁFICO 2: VENTAS POR SEMANA (V1 A V5)
-  // ==========================================
   let canvasSemanas = document.getElementById('chartGlobalSemanas');
   if (canvasSemanas) {
     let existingChart = Chart.getChart(canvasSemanas);
@@ -1783,9 +1691,6 @@ function renderTrendsGlobalTable() {
     });
   }
 
-  // ==========================================
-  // GRÁFICO 3: SEMÁFORO GLOBAL POR MES (STACKED)
-  // ==========================================
   let canvasSemaforo = document.getElementById('chartGlobalSemaforo');
   if (canvasSemaforo) {
     let existingChart = Chart.getChart(canvasSemaforo);
@@ -1816,3 +1721,21 @@ function renderTrendsGlobalTable() {
     });
   }
 }
+
+document.addEventListener('DOMContentLoaded', () => {
+  populateMonthSelector();
+  
+  const searchInput = document.getElementById('filter-search');
+  if (searchInput) {
+    searchInput.addEventListener('input', filterData);
+  }
+
+  document.getElementById('filter-mes').addEventListener('change', loadDashboardData);
+  document.getElementById('btn-reset').addEventListener('click', resetAllFilters);
+  
+  preloadAllMonths();
+
+  setInterval(() => {
+    fetchCurrentMonthData();
+  }, 120000);
+});
