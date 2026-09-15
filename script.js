@@ -925,7 +925,7 @@ function renderTrainerSessions(data) {
           let producto = parseSessionField(rawCellContent, '📚 Producto:');
           let objeciones = parseSessionField(rawCellContent, '🛡️ Objeciones:');
           let cierre = parseSessionField(rawCellContent, '🤝 Cierre:');
-          let acuerdosEstado = parseSessionField(rawCellContent, '📌 Acuerdos \\+ Estado:');
+          let acuerdosEstado = parseSessionField(rawCellContent, '📌 Acuerdos + Estado');
 
           if (fecha === '-') {
             const dateMatch = rawCellContent.match(/\d{1,2}[\/\.-]\d{1,2}[\/\.-]\d{2,4}/);
