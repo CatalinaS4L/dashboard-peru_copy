@@ -63,15 +63,26 @@ function filterRow(row) {
   return matchSearch && matchTrainer && matchSupervisor && matchCoordinador && matchStatus;
 }
 
+// Lista de etiquetas clave para delimitar el parser de las sesiones
 const EXACT_KEYWORDS = [
-  "📅 Fecha", "🔗 URLTr:", "🗣️ Speech:", "📚 Producto:", "🛡️ Objeciones:", "🤝 Cierre:", "📌 Acuerdos \\+ Estado:"
+  "📅 Fecha", "🔗 URLTr", "🗣️ Speech", "📚 Producto", "🛡️ Objeciones", "🤝 Cierre", "📌 Acuerdos \\+ Estado"
 ];
 
 function parseSessionField(fullText, exactLabel) {
   if (!fullText) return '-';
+  
+  // Escapar la etiqueta buscada para usarla dentro de la Regex
   const escapedLabel = exactLabel.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
   const lookaheadPattern = EXACT_KEYWORDS.join('|');
-  const regex = new RegExp(`${escapedLabel}\\s*[:\\-=]?\\s*([\\s\\S]*?)(?=(?:${lookaheadPattern})\\s*[:\\-=]|$|\n)`);
+  
+  // Expresión regular ajustada:
+  // 1. Permite encontrar la etiqueta aunque le sigan palabras/espacios y opcionalmente ':' o '-'
+  // 2. Captura todo hasta encontrar el inicio de otra etiqueta O un salto de línea con un emoji/etiqueta
+  const regex = new RegExp(
+    `${escapedLabel}(?:\\s*[^:\\n]*[:\\-=])?\\s*([\\s\\S]*?)(?=(?:${lookaheadPattern})|\\n|$)`, 
+    'i'
+  );
+  
   const match = fullText.match(regex);
   if (match && match[1]) {
     const val = match[1].trim();
