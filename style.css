@@ -429,7 +429,7 @@ th:hover {
 .btn-pdf {
   width: 100%;
   padding: 8px 12px;
-  background-color: #3b82f6;
+  background-color: #ffb937;
   color: #ffffff;
   border: none;
   border-radius: 4px;
@@ -439,7 +439,7 @@ th:hover {
 }
 
 .btn-pdf:hover {
-  background-color: #2563eb;
+  background-color: #f4a134;
 }
 
 /* Contenedor flexible para los dos botones en paralelo */
