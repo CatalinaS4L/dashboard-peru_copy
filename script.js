@@ -75,11 +75,8 @@ function parseSessionField(fullText, exactLabel) {
   const escapedLabel = exactLabel.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
   const lookaheadPattern = EXACT_KEYWORDS.join('|');
   
-  // Expresión regular optimizada:
-  // 1. ${escapedLabel}: Busca el texto clave exacto (ej. "🛡️ Objeciones").
-  // 2. (?:\\s*[:\\-=])?: Consume ÚNICAMENTE el primer separador (:, -, =) inmediatamente pegado al título si existe.
-  // 3. ([\\s\\S]*?): Captura todo el contenido (incluyendo cualquier ":" adicional dentro del texto).
-  // 4. (?=(?:\\n\\s*)?(?:${lookaheadPattern})|$): Detiene la captura solo si se topa con otra palabra clave o el final del texto.
+  // Expresión regular corregida:
+  // consume únicamente los separadores pegados al título, permitiendo "-" internos en las respuestas.
   const regex = new RegExp(
     `${escapedLabel}(?:\\s*[:\\-=])?\\s*([\\s\\S]*?)(?=(?:\\n\\s*)?(?:${lookaheadPattern})|$)`, 
     'i'
@@ -934,11 +931,11 @@ function renderTrainerSessions(data) {
           const numSesion = matchNum ? matchNum[0] : '';
 
           let fecha = parseSessionField(rawCellContent, '📅 Fecha');
-          let speech = parseSessionField(rawCellContent, '🗣️ Speech:');
-          let producto = parseSessionField(rawCellContent, '📚 Producto:');
-          let objeciones = parseSessionField(rawCellContent, '🛡️ Objeciones:');
-          let cierre = parseSessionField(rawCellContent, '🤝 Cierre:');
-          let acuerdosEstado = parseSessionField(rawCellContent, '📌 Acuerdos + Estado');
+          let speech = parseSessionField(rawCellContent, '🗣️ Speech');
+          let producto = parseSessionField(rawCellContent, '📚 Producto');
+          let objeciones = parseSessionField(rawCellContent, '🛡️ Objeciones');
+          let cierre = parseSessionField(rawCellContent, '🤝 Cierre');
+          let acuerdosEstado = parseSessionField(rawCellContent, '📌 Acuerdos \\+ Estado');
 
           if (fecha === '-') {
             const dateMatch = rawCellContent.match(/\d{1,2}[\/\.-]\d{1,2}[\/\.-]\d{2,4}/);
