@@ -921,32 +921,25 @@ function renderTrainerSessions(data) {
           const numSesion = matchNum ? matchNum[0] : '';
 
           let fecha = parseSessionField(rawCellContent, '📅 Fecha');
-          let urlTr = parseSessionField(rawCellContent, '🔗 URLTr:');
           let speech = parseSessionField(rawCellContent, '🗣️ Speech:');
           let producto = parseSessionField(rawCellContent, '📚 Producto:');
           let objeciones = parseSessionField(rawCellContent, '🛡️ Objeciones:');
           let cierre = parseSessionField(rawCellContent, '🤝 Cierre:');
-          let acuerdosEstado = parseSessionField(rawCellContent, '📌 Acuerdos + Estado:');
+          let acuerdosEstado = parseSessionField(rawCellContent, '📌 Acuerdos \\+ Estado:');
 
           if (fecha === '-') {
             const dateMatch = rawCellContent.match(/\d{1,2}[\/\.-]\d{1,2}[\/\.-]\d{2,4}/);
             if (dateMatch) fecha = dateMatch[0];
           }
 
-          if (urlTr === '-') {
-            const urlMatch = rawCellContent.match(/https?:\/\/[^\s]+/i);
-            if (urlMatch) urlTr = urlMatch[0];
-          }
-
           agentMonthMap[uniqueKey].sessions.push({
             num: numSesion ? `Sesión ${numSesion}` : key,
             fecha: fecha,
-            urlTr: urlTr,
             speech: speech,
             producto: producto,
             objeciones: objeciones,
             cierre: cierre,
-            acuerdosEstado: acuerdosEstado !== '-' ? acuerdosEstado : rawCellContent
+            acuerdosEstado: acuerdosEstado
           });
         }
       }
@@ -972,7 +965,6 @@ function renderTrainerSessions(data) {
           ${s.num} — Fecha: <span style="font-weight: normal;">${s.fecha}</span>
         </div>
         <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 8px; font-size: 0.9em;">
-          <div><strong>URLTr:</strong> ${s.urlTr !== '-' ? `<a href="${s.urlTr}" target="_blank">Ver Enlace</a>` : '-'}</div>
           <div><strong>Speech:</strong> ${s.speech}</div>
           <div><strong>Producto:</strong> ${s.producto}</div>
           <div><strong>Objeciones:</strong> ${s.objeciones}</div>
