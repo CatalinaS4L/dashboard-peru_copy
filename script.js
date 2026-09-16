@@ -1778,18 +1778,15 @@ async function exportCurrentViewToPDF() {
 
     let currentY = 17 + (splitFilters.length * 4) + 4;
 
-    // 4. CAPTURA DE ELEMENTOS VISUALES Y GRÁFICOS
-    // Se amplía la selección para incluir canvas directos, contenedores de monitoreo y bloques de sesiones
+    // 4. CAPTURA DE ELEMENTOS VISUALES Y GRÁFICOS (PROPORCIONAL)
     const selector = '.chart-card, .agent-trend-card, .agent-session-card, .summary-cards-grid, .monitoring-chart-container, canvas';
     const visualBlocks = Array.from(activeTabContainer.querySelectorAll(selector))
-      // Filtrar canvas que ya estén dentro de una .chart-card para no duplicar capturas
       .filter(el => !(el.tagName === 'CANVAS' && el.closest('.chart-card, .agent-session-card')));
 
     for (let i = 0; i < visualBlocks.length; i++) {
       const block = visualBlocks[i];
       if (block.offsetWidth === 0 || block.offsetHeight === 0) continue;
 
-      // Generar captura con html2canvas
       const canvas = await html2canvas(block, { 
         scale: 2, 
         useCORS: true,
@@ -1798,30 +1795,38 @@ async function exportCurrentViewToPDF() {
       });
       
       const imgData = canvas.toDataURL('image/png');
-      let imgHeight = (canvas.height * pdfWidth) / canvas.width;
+      
+      // Conversión de px a mm (1px ≈ 0.264583mm)
+      const pxToMm = 0.264583;
+      let finalWidth = (canvas.width / 2) * pxToMm;  // Dividido entre 2 por la escala
+      let finalHeight = (canvas.height / 2) * pxToMm;
 
-      // SI LA IMAGEN ES MÁS ALTA QUE UNA PÁGINA ENTERA (Ej. Sesiones largas de Trainers)
-      // Se escala proporcionalmente para adaptarse al alto máximo disponible de la hoja
-      if (imgHeight > pageHeight - 20) {
-        const ratio = (pageHeight - 20) / imgHeight;
-        imgHeight = pageHeight - 20;
-        // Ajustamos también el ancho proporcionalmente para no deformar la imagen
-        var adjustedWidth = pdfWidth * ratio;
-      } else {
-        var adjustedWidth = pdfWidth;
+      // 1. Ajuste si el ANCHO supera la página (evita corte horizontal)
+      if (finalWidth > pdfWidth) {
+        const widthRatio = pdfWidth / finalWidth;
+        finalWidth = pdfWidth;
+        finalHeight = finalHeight * widthRatio;
+      }
+
+      // 2. Ajuste si el ALTO aún supera la página (evita corte vertical en tarjetas largas)
+      const maxHeight = pageHeight - 20;
+      if (finalHeight > maxHeight) {
+        const heightRatio = maxHeight / finalHeight;
+        finalHeight = maxHeight;
+        finalWidth = finalWidth * heightRatio;
       }
 
       // Evaluar salto de página según la posición vertical actual
-      if (currentY + imgHeight > pageHeight) {
+      if (currentY + finalHeight > pageHeight) {
         doc.addPage();
         currentY = 15;
       }
 
-      // Centrar horizontalmente la imagen si se ajustó su ancho
-      const xPosition = 14 + ((pdfWidth - adjustedWidth) / 2);
+      // Centrar la imagen horizontalmente si es más angosta que el lienzo
+      const xPosition = 14 + ((pdfWidth - finalWidth) / 2);
 
-      doc.addImage(imgData, 'PNG', xPosition, currentY, adjustedWidth, imgHeight);
-      currentY += imgHeight + 8; // Espaciado entre bloques
+      doc.addImage(imgData, 'PNG', xPosition, currentY, finalWidth, finalHeight);
+      currentY += finalHeight + 8; // Espaciado entre bloques
     }
 
     // 5. RENDERIZADO DE TABLAS HTML
