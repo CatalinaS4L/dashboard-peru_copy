@@ -1797,7 +1797,6 @@ async function exportCurrentViewToPDF() {
 
     const imgData = canvas.toDataURL('image/png');
     const pdfWidth = 269; // Ancho disponible en A4 horizontal
-    const imgHeight = (canvas.height * imgWidth) / canvas.width;
     // Proporción real de la imagen capturada para mantener la escala original
     const imgHeight = (canvas.height * pdfWidth) / canvas.width;
 
