@@ -1728,111 +1728,88 @@ async function exportCurrentViewToPDF() {
   const { jsPDF } = window.jspdf;
   const btnExport = document.getElementById('btn-export-pdf');
   
-  // Feedback visual durante el procesamiento
   btnExport.textContent = 'Generando...';
   btnExport.disabled = true;
 
   try {
     const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+    const pageHeight = 190; // Límite utilizable vertical en A4 Landscape
+    const pdfWidth = 269;  // Ancho utilizable
 
-    // 1. Identificar pestaña activa
+    // 1. Pestaña activa
     const activeTabBtn = document.querySelector('.tab-button.active');
     const tabTitle = activeTabBtn ? activeTabBtn.textContent.trim() : 'Reporte';
-    
-    // Obtener el contenedor visible de la pestaña actual
     const activeTabContainer = document.querySelector('.tab-content:not([style*="display: none"])') || document.body;
 
-    // 2. Encabezado y título del PDF
+    // 2. Encabezado
     doc.setFontSize(14);
     doc.setTextColor(30, 41, 59);
     doc.text(`Reporte Dashboard: ${tabTitle}`, 14, 12);
-    
-    // 3. CAPTURA DINÁMICA DE TODOS LOS FILTROS
+
+    // 3. Resumen de Filtros
     const filterElements = document.querySelectorAll('.filters-grid select, .filters-grid input');
     const activeFilters = [];
 
     filterElements.forEach(el => {
-      // Intenta obtener la etiqueta (label) asociada al filtro
       let labelText = el.previousElementSibling?.textContent?.replace(':', '').trim() 
                    || el.getAttribute('placeholder') 
                    || el.id;
-
       let valueText = el.value ? el.value.trim() : '';
-      
-      // Si el select tiene texto en la opción seleccionada, usamos ese texto
       if (el.tagName === 'SELECT' && el.selectedIndex >= 0) {
         valueText = el.options[el.selectedIndex].text.trim();
       }
-
       if (valueText && valueText !== '') {
         activeFilters.push(`${labelText}: ${valueText}`);
       }
     });
 
-    // Agregar estados de botones de riesgo/foco si están activos
     if (typeof onlyCriticalRisk !== 'undefined' && onlyCriticalRisk) activeFilters.push('Foco: Riesgo Crítico');
     if (typeof onlyConsistentGreen !== 'undefined' && onlyConsistentGreen) activeFilters.push('Foco: 2 Meses Verde');
     if (typeof onlyRegularPerformers !== 'undefined' && onlyRegularPerformers) activeFilters.push('Foco: Agentes Regulares');
 
-    // Dibujar el resumen de todos los filtros en el PDF
     doc.setFontSize(8);
     doc.setTextColor(80);
     const filterString = activeFilters.length > 0 
       ? `Filtros aplicados: ${activeFilters.join('  |  ')}` 
       : 'Filtros aplicados: Ninguno (Todos los datos)';
     
-    // Dividir en varias líneas si la cadena de filtros es muy larga
-    const splitFilters = doc.splitTextToSize(filterString, 269);
+    const splitFilters = doc.splitTextToSize(filterString, pdfWidth);
     doc.text(splitFilters, 14, 17);
 
-    // Calcular la posición Y de inicio para las imágenes en función de las líneas de filtros
-    let currentY = 17 + (splitFilters.length * 4) + 2;
+    let currentY = 17 + (splitFilters.length * 4) + 4;
 
-    // 4. Captura visual de gráficos y KPIs (omite las tablas para evitar duplicación)
-    const canvas = await html2canvas(activeTabContainer, {
-      scale: 2,
-      useCORS: true,
-      ignoreElements: (element) => element.tagName === 'TABLE' || element.classList.contains('filter-actions-container')
-    });
+    // 4. CAPTURA Y SALTO DE PÁGINA INDIVIDUAL POR CADA ELEMENTO VISUAL
+    // Selecciona tarjetas de gráficos, contenedores de agentes, resúmenes, etc.
+    const visualBlocks = activeTabContainer.querySelectorAll('.chart-card, .agent-trend-card, .agent-session-card, .summary-cards-grid');
 
-    const imgData = canvas.toDataURL('image/png');
-    const pdfWidth = 269; // Ancho disponible en A4 horizontal
-    const pageHeight = 190; // Altura máxima utilizable por página
-    const marginBottom = 14;
+    for (let i = 0; i < visualBlocks.length; i++) {
+      const block = visualBlocks[i];
+      if (block.offsetWidth === 0 || block.offsetHeight === 0) continue;
 
-    // Proporción de aspecto exacta basada en el canvas real capturado
-    let imgHeight = (canvas.height * pdfWidth) / canvas.width;
+      const canvas = await html2canvas(block, { scale: 2, useCORS: true });
+      const imgData = canvas.toDataURL('image/png');
+      const imgHeight = (canvas.height * pdfWidth) / canvas.width;
 
-    // SI LA IMAGEN NO CABE EN EL ESPACIO RESTANTE DE LA PÁGINA ACTUAL:
-    // Salta a una nueva página para que la gráfica pueda mostrarse grande sin aplastarse
-    if (currentY + imgHeight > pageHeight) {
-      // Si la altura por sí sola es más grande que una página entera, la limitamos al alto máximo de página
-      if (imgHeight > (pageHeight - marginBottom)) {
-        const scale = (pageHeight - marginBottom) / imgHeight;
-        imgHeight = imgHeight * scale;
+      // Evalúa si el bloque cabe en la hoja actual o si requiere salto de página
+      if (currentY + imgHeight > pageHeight) {
+        doc.addPage();
+        currentY = 15;
       }
-      
-      doc.addPage();
-      currentY = 20; // Reiniciar posición Y en la nueva página
+
+      doc.addImage(imgData, 'PNG', 14, currentY, pdfWidth, imgHeight);
+      currentY += imgHeight + 8; // Espaciado entre elementos
     }
 
-    // Insertar la imagen en tamaño ampliado manteniendo la proporción
-    const finalWidth = pdfWidth * (imgHeight / ((canvas.height * pdfWidth) / canvas.width));
-    doc.addImage(imgData, 'PNG', 14, currentY, finalWidth, imgHeight);
-    currentY += imgHeight + 10;
-
-    // 5. INCLUSIÓN DE TODAS LAS TABLAS VISIBLES EN LA PESTAÑA ACTIVA
+    // 5. RENDERIZADO DE TABLAS HTML A CONTINUACIÓN
     const tablesInActiveTab = activeTabContainer.querySelectorAll('table');
 
     if (tablesInActiveTab.length > 0) {
       tablesInActiveTab.forEach((tableEl, index) => {
-        // Si la tabla no cabe en la página actual, crea una nueva página automáticamente
-        if (currentY > 160 && index > 0) {
+        if (currentY > 150) {
           doc.addPage();
           currentY = 15;
         }
 
-        // Si la tabla tiene un título cercano (ej. h3, h4 o título de sección), lo extrae
         const tableTitle = tableEl.previousElementSibling?.tagName.startsWith('H') 
           ? tableEl.previousElementSibling.textContent.trim() 
           : null;
@@ -1844,7 +1821,6 @@ async function exportCurrentViewToPDF() {
           currentY += 4;
         }
 
-        // Renderizado de cada tabla
         doc.autoTable({
           html: tableEl,
           startY: currentY,
@@ -1852,19 +1828,17 @@ async function exportCurrentViewToPDF() {
           styles: { fontSize: 7, cellPadding: 1.5 },
           headStyles: { fillColor: [6, 183, 6], textColor: [255, 255, 255], fontStyle: 'bold' },
           didParseCell: function(data) {
-            // Limpia código HTML residual en las celdas
             if (data.cell.raw && typeof data.cell.raw === 'string') {
               data.cell.text = data.cell.raw.replace(/<[^>]*>/g, '').trim();
             }
           }
         });
 
-        // Actualiza el punto de inicio para la siguiente tabla
         currentY = doc.lastAutoTable.finalY + 8;
       });
     }
 
-    // 6. Descargar el archivo generado
+    // 6. Descarga final
     const filename = `Reporte_${tabTitle.replace(/\s+/g, '_')}_${new Date().toISOString().slice(0, 10)}.pdf`;
     doc.save(filename);
 
