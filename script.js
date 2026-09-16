@@ -1797,18 +1797,21 @@ async function exportCurrentViewToPDF() {
 
     const imgData = canvas.toDataURL('image/png');
     const pdfWidth = 269; // Ancho disponible en A4 horizontal
-    // Proporción real de la imagen capturada para mantener la escala original
-    const imgHeight = (canvas.height * pdfWidth) / canvas.width;
+    const pdfMaxHeight = 180; // Altura máxima permitida por página sin sobrepasar bordes
 
-    // Control de salto de página si la gráfica es más alta que la hoja
-    if (currentY + imgHeight > 190) {
-      doc.addImage(imgData, 'PNG', 14, currentY, pdfWidth, 190 - currentY);
-      doc.addPage();
-      currentY = 15;
-    } else {
-      doc.addImage(imgData, 'PNG', 14, currentY, pdfWidth, imgHeight);
-      currentY += imgHeight + 6;
+    // Proporción de aspecto exacta basada en el canvas real capturado
+    let imgHeight = (canvas.height * pdfWidth) / canvas.width;
+
+    // Si la altura proporcional supera el alto disponible de la página, ajustar proporcionalmente la imagen
+    if (imgHeight > (pdfMaxHeight - currentY)) {
+      // Ajustar escala para mantener proporciones sin aplastar el gráfico
+      const scaleFactor = (pdfMaxHeight - currentY) / imgHeight;
+      imgHeight = imgHeight * scaleFactor;
     }
+
+    // Insertar la imagen respetando la relación de aspecto corregida
+    doc.addImage(imgData, 'PNG', 14, currentY, pdfWidth * (imgHeight / ((canvas.height * pdfWidth) / canvas.width)), imgHeight);
+    currentY += imgHeight + 6;
 
     // 5. INCLUSIÓN DE TODAS LAS TABLAS VISIBLES EN LA PESTAÑA ACTIVA
     const tablesInActiveTab = activeTabContainer.querySelectorAll('table');
