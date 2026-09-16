@@ -1778,37 +1778,45 @@ async function exportCurrentViewToPDF() {
 
     let currentY = 17 + (splitFilters.length * 4) + 4;
 
-    // 4. CAPTURA DE ELEMENTOS VISUALES Y GRÁFICOS (PROPORCIONAL)
-    const selector = '.chart-card, .agent-trend-card, .agent-session-card, .summary-cards-grid, .monitoring-chart-container, canvas';
-    const visualBlocks = Array.from(activeTabContainer.querySelectorAll(selector))
-      .filter(el => !(el.tagName === 'CANVAS' && el.closest('.chart-card, .agent-session-card')));
+    // 4. CAPTURA Y SALTO DE PÁGINA INDIVIDUAL POR CADA ELEMENTO VISUAL
+    // Seleccionamos SOLO los contenedores principales para evitar capturar los <canvas> duplicados
+    const visualBlocks = Array.from(activeTabContainer.querySelectorAll(
+      '.chart-card, .agent-trend-card, .agent-session-card, .summary-cards-grid, .monitoring-chart-container'
+    ));
 
     for (let i = 0; i < visualBlocks.length; i++) {
       const block = visualBlocks[i];
       if (block.offsetWidth === 0 || block.offsetHeight === 0) continue;
 
+      // scrollIntoView garantiza que elementos con lazy loading o renders dinámicos estén visibles
+      block.scrollIntoView({ block: 'end' });
+
       const canvas = await html2canvas(block, { 
         scale: 2, 
         useCORS: true,
         logging: false,
-        windowWidth: block.scrollWidth
+        scrollX: 0,
+        scrollY: 0,
+        // Forzamos el ancho al scrollWidth del bloque para que capture barras/meses ocultos a la derecha
+        width: block.scrollWidth,
+        height: block.scrollHeight
       });
       
       const imgData = canvas.toDataURL('image/png');
       
-      // Conversión de px a mm (1px ≈ 0.264583mm)
+      // Conversión de dimensiones (px a mm)
       const pxToMm = 0.264583;
-      let finalWidth = (canvas.width / 2) * pxToMm;  // Dividido entre 2 por la escala
+      let finalWidth = (canvas.width / 2) * pxToMm;
       let finalHeight = (canvas.height / 2) * pxToMm;
 
-      // 1. Ajuste si el ANCHO supera la página (evita corte horizontal)
+      // 1. Escalar proporcionalmente si el ANCHO excede el límite visible del PDF
       if (finalWidth > pdfWidth) {
         const widthRatio = pdfWidth / finalWidth;
         finalWidth = pdfWidth;
         finalHeight = finalHeight * widthRatio;
       }
 
-      // 2. Ajuste si el ALTO aún supera la página (evita corte vertical en tarjetas largas)
+      // 2. Escalar proporcionalmente si el ALTO excede el alto de la hoja
       const maxHeight = pageHeight - 20;
       if (finalHeight > maxHeight) {
         const heightRatio = maxHeight / finalHeight;
@@ -1816,17 +1824,17 @@ async function exportCurrentViewToPDF() {
         finalWidth = finalWidth * heightRatio;
       }
 
-      // Evaluar salto de página según la posición vertical actual
+      // 3. Evaluar salto de página si sobrepasa el límite vertical disponible
       if (currentY + finalHeight > pageHeight) {
         doc.addPage();
         currentY = 15;
       }
 
-      // Centrar la imagen horizontalmente si es más angosta que el lienzo
+      // Centrar la imagen en el lienzo PDF
       const xPosition = 14 + ((pdfWidth - finalWidth) / 2);
 
       doc.addImage(imgData, 'PNG', xPosition, currentY, finalWidth, finalHeight);
-      currentY += finalHeight + 8; // Espaciado entre bloques
+      currentY += finalHeight + 8; // Espacio vertical entre bloques
     }
 
     // 5. RENDERIZADO DE TABLAS HTML
