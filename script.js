@@ -1733,8 +1733,8 @@ async function exportCurrentViewToPDF() {
 
   try {
     const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
-    const pageHeight = 190; // Límite utilizable vertical en A4 Landscape
-    const pdfWidth = 269;  // Ancho utilizable
+    const pageHeight = 190; // Alto máximo utilizable por página
+    const pdfWidth = 269;   // Ancho utilizable
 
     // 1. Pestaña activa
     const activeTabBtn = document.querySelector('.tab-button.active');
@@ -1778,33 +1778,57 @@ async function exportCurrentViewToPDF() {
 
     let currentY = 17 + (splitFilters.length * 4) + 4;
 
-    // 4. CAPTURA Y SALTO DE PÁGINA INDIVIDUAL POR CADA ELEMENTO VISUAL
-    // Selecciona tarjetas de gráficos, contenedores de agentes, resúmenes, etc.
-    const visualBlocks = activeTabContainer.querySelectorAll('.chart-card, .agent-trend-card, .agent-session-card, .summary-cards-grid');
+    // 4. CAPTURA DE ELEMENTOS VISUALES Y GRÁFICOS
+    // Se amplía la selección para incluir canvas directos, contenedores de monitoreo y bloques de sesiones
+    const selector = '.chart-card, .agent-trend-card, .agent-session-card, .summary-cards-grid, .monitoring-chart-container, canvas';
+    const visualBlocks = Array.from(activeTabContainer.querySelectorAll(selector))
+      // Filtrar canvas que ya estén dentro de una .chart-card para no duplicar capturas
+      .filter(el => !(el.tagName === 'CANVAS' && el.closest('.chart-card, .agent-session-card')));
 
     for (let i = 0; i < visualBlocks.length; i++) {
       const block = visualBlocks[i];
       if (block.offsetWidth === 0 || block.offsetHeight === 0) continue;
 
-      const canvas = await html2canvas(block, { scale: 2, useCORS: true });
+      // Generar captura con html2canvas
+      const canvas = await html2canvas(block, { 
+        scale: 2, 
+        useCORS: true,
+        logging: false,
+        windowWidth: block.scrollWidth
+      });
+      
       const imgData = canvas.toDataURL('image/png');
-      const imgHeight = (canvas.height * pdfWidth) / canvas.width;
+      let imgHeight = (canvas.height * pdfWidth) / canvas.width;
 
-      // Evalúa si el bloque cabe en la hoja actual o si requiere salto de página
+      // SI LA IMAGEN ES MÁS ALTA QUE UNA PÁGINA ENTERA (Ej. Sesiones largas de Trainers)
+      // Se escala proporcionalmente para adaptarse al alto máximo disponible de la hoja
+      if (imgHeight > pageHeight - 20) {
+        const ratio = (pageHeight - 20) / imgHeight;
+        imgHeight = pageHeight - 20;
+        // Ajustamos también el ancho proporcionalmente para no deformar la imagen
+        var adjustedWidth = pdfWidth * ratio;
+      } else {
+        var adjustedWidth = pdfWidth;
+      }
+
+      // Evaluar salto de página según la posición vertical actual
       if (currentY + imgHeight > pageHeight) {
         doc.addPage();
         currentY = 15;
       }
 
-      doc.addImage(imgData, 'PNG', 14, currentY, pdfWidth, imgHeight);
-      currentY += imgHeight + 8; // Espaciado entre elementos
+      // Centrar horizontalmente la imagen si se ajustó su ancho
+      const xPosition = 14 + ((pdfWidth - adjustedWidth) / 2);
+
+      doc.addImage(imgData, 'PNG', xPosition, currentY, adjustedWidth, imgHeight);
+      currentY += imgHeight + 8; // Espaciado entre bloques
     }
 
-    // 5. RENDERIZADO DE TABLAS HTML A CONTINUACIÓN
+    // 5. RENDERIZADO DE TABLAS HTML
     const tablesInActiveTab = activeTabContainer.querySelectorAll('table');
 
     if (tablesInActiveTab.length > 0) {
-      tablesInActiveTab.forEach((tableEl, index) => {
+      tablesInActiveTab.forEach((tableEl) => {
         if (currentY > 150) {
           doc.addPage();
           currentY = 15;
@@ -1838,7 +1862,7 @@ async function exportCurrentViewToPDF() {
       });
     }
 
-    // 6. Descarga final
+    // 6. Descarga del archivo
     const filename = `Reporte_${tabTitle.replace(/\s+/g, '_')}_${new Date().toISOString().slice(0, 10)}.pdf`;
     doc.save(filename);
 
