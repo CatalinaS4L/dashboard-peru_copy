@@ -1797,21 +1797,29 @@ async function exportCurrentViewToPDF() {
 
     const imgData = canvas.toDataURL('image/png');
     const pdfWidth = 269; // Ancho disponible en A4 horizontal
-    const pdfMaxHeight = 180; // Altura máxima permitida por página sin sobrepasar bordes
+    const pageHeight = 190; // Altura máxima utilizable por página
+    const marginBottom = 14;
 
     // Proporción de aspecto exacta basada en el canvas real capturado
     let imgHeight = (canvas.height * pdfWidth) / canvas.width;
 
-    // Si la altura proporcional supera el alto disponible de la página, ajustar proporcionalmente la imagen
-    if (imgHeight > (pdfMaxHeight - currentY)) {
-      // Ajustar escala para mantener proporciones sin aplastar el gráfico
-      const scaleFactor = (pdfMaxHeight - currentY) / imgHeight;
-      imgHeight = imgHeight * scaleFactor;
+    // SI LA IMAGEN NO CABE EN EL ESPACIO RESTANTE DE LA PÁGINA ACTUAL:
+    // Salta a una nueva página para que la gráfica pueda mostrarse grande sin aplastarse
+    if (currentY + imgHeight > pageHeight) {
+      // Si la altura por sí sola es más grande que una página entera, la limitamos al alto máximo de página
+      if (imgHeight > (pageHeight - marginBottom)) {
+        const scale = (pageHeight - marginBottom) / imgHeight;
+        imgHeight = imgHeight * scale;
+      }
+      
+      doc.addPage();
+      currentY = 20; // Reiniciar posición Y en la nueva página
     }
 
-    // Insertar la imagen respetando la relación de aspecto corregida
-    doc.addImage(imgData, 'PNG', 14, currentY, pdfWidth * (imgHeight / ((canvas.height * pdfWidth) / canvas.width)), imgHeight);
-    currentY += imgHeight + 6;
+    // Insertar la imagen en tamaño ampliado manteniendo la proporción
+    const finalWidth = pdfWidth * (imgHeight / ((canvas.height * pdfWidth) / canvas.width));
+    doc.addImage(imgData, 'PNG', 14, currentY, finalWidth, imgHeight);
+    currentY += imgHeight + 10;
 
     // 5. INCLUSIÓN DE TODAS LAS TABLAS VISIBLES EN LA PESTAÑA ACTIVA
     const tablesInActiveTab = activeTabContainer.querySelectorAll('table');

@@ -477,3 +477,9 @@ th:hover {
   width: 100%;
   height: 320px; /* Reducir ligeramente de 450px a 320px evita que ocupe demasiado espacio vertical en el PDF */
 }
+
+.chart-wrapper {
+  position: relative;
+  width: 100%;
+  height: 420px; /* Aumentado de 320px a 420px para dar mayor legibilidad y detalle */
+}
