@@ -1778,18 +1778,32 @@ async function exportCurrentViewToPDF() {
 
     let currentY = 17 + (splitFilters.length * 4) + 4;
 
-    // 4. CAPTURA Y SALTO DE PÁGINA INDIVIDUAL POR CADA ELEMENTO VISUAL
-    // Seleccionamos SOLO los contenedores principales para evitar capturar los <canvas> duplicados
-    const visualBlocks = Array.from(activeTabContainer.querySelectorAll(
-      '.chart-card, .agent-trend-card, .agent-session-card, .summary-cards-grid, .monitoring-chart-container'
-    ));
+    // 4. CAPTURA DE ELEMENTOS VISUALES Y GRÁFICOS (INCLUYE MATRIZ DE DIAGNÓSTICO)
+    // Se agregan selectores comunes para la matriz (#diagnostic-matrix, .matrix-container, .diagnostic-chart)
+    const selector = [
+      '.chart-card', 
+      '.agent-trend-card', 
+      '.agent-session-card', 
+      '.summary-cards-grid', 
+      '.monitoring-chart-container',
+      '#diagnostic-matrix', 
+      '.matrix-container', 
+      '.diagnostic-chart', 
+      '[id*="matrix"]', 
+      '[class*="matrix"]'
+    ].join(', ');
+
+    const visualBlocks = Array.from(activeTabContainer.querySelectorAll(selector));
 
     for (let i = 0; i < visualBlocks.length; i++) {
       const block = visualBlocks[i];
       if (block.offsetWidth === 0 || block.offsetHeight === 0) continue;
 
-      // scrollIntoView garantiza que elementos con lazy loading o renders dinámicos estén visibles
-      block.scrollIntoView({ block: 'end' });
+      // Asegura que el elemento esté visible en pantalla antes de capturarlo
+      block.scrollIntoView({ block: 'center' });
+      
+      // Pequeño retardo para asegurar que gráficos tipo Canvas/SVG/Matriz terminen de renderizarse
+      await new Promise(resolve => setTimeout(resolve, 150));
 
       const canvas = await html2canvas(block, { 
         scale: 2, 
@@ -1797,7 +1811,6 @@ async function exportCurrentViewToPDF() {
         logging: false,
         scrollX: 0,
         scrollY: 0,
-        // Forzamos el ancho al scrollWidth del bloque para que capture barras/meses ocultos a la derecha
         width: block.scrollWidth,
         height: block.scrollHeight
       });
@@ -1809,7 +1822,7 @@ async function exportCurrentViewToPDF() {
       let finalWidth = (canvas.width / 2) * pxToMm;
       let finalHeight = (canvas.height / 2) * pxToMm;
 
-      // 1. Escalar proporcionalmente si el ANCHO excede el límite visible del PDF
+      // 1. Escalar proporcionalmente si el ANCHO excede el límite del PDF
       if (finalWidth > pdfWidth) {
         const widthRatio = pdfWidth / finalWidth;
         finalWidth = pdfWidth;
