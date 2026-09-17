@@ -1778,20 +1778,13 @@ async function exportCurrentViewToPDF() {
 
     let currentY = 17 + (splitFilters.length * 4) + 4;
 
-    // 4. CAPTURA DE ELEMENTOS VISUALES Y GRÁFICOS (INCLUYE MATRIZ DE DIAGNÓSTICO)
-    // Se agregan selectores comunes para la matriz (#diagnostic-matrix, .matrix-container, .diagnostic-chart)
+    // 4. CAPTURA DE ELEMENTOS VISUALES Y GRÁFICOS
+    // Se filtran los selectores redundantes para evitar duplicados en la pestaña Monitoreo Diagnóstico
     const selector = [
-      '#chartQualityVsPerformance',
       '.chart-card', 
       '.agent-trend-card', 
       '.agent-session-card', 
-      '.summary-cards-grid', 
-      '.monitoring-chart-container',
-      '#diagnostic-matrix', 
-      '.matrix-container', 
-      '.diagnostic-chart', 
-      '[id*="matrix"]', 
-      '[class*="matrix"]'
+      '.summary-cards-grid'
     ].join(', ');
 
     const visualBlocks = Array.from(activeTabContainer.querySelectorAll(selector));
