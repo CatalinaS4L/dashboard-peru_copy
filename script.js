@@ -1781,6 +1781,7 @@ async function exportCurrentViewToPDF() {
     // 4. CAPTURA DE ELEMENTOS VISUALES Y GRÁFICOS (INCLUYE MATRIZ DE DIAGNÓSTICO)
     // Se agregan selectores comunes para la matriz (#diagnostic-matrix, .matrix-container, .diagnostic-chart)
     const selector = [
+      '#chartQualityVsPerformance',
       '.chart-card', 
       '.agent-trend-card', 
       '.agent-session-card', 
