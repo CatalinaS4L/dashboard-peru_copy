@@ -1890,7 +1890,10 @@ async function exportCurrentViewToPDF() {
               if (fillColor) {
                 doc.setFillColor(...fillColor);
                 // Dibujar un círculo pequeño al inicio del texto de la celda
-                doc.circle(data.cell.x + 3, data.cell.y + (data.cell.height / 2), 1.2, 'F');
+                const posX = data.cell.x + data.cell.width - 4; // Ajusta a 4px del borde derecho
+                const posY = data.cell.y + (data.cell.height / 2);
+                
+                doc.circle(posX, posY, 1.2, 'F');
               }
             }
           }
