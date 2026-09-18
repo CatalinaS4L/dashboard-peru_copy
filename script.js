@@ -1882,7 +1882,7 @@ async function exportCurrentViewToPDF() {
               const rawHtml = data.cell.raw ? (data.cell.raw.outerHTML || data.cell.raw.innerHTML || '') : '';
         
               // Verificar si ESTA celda específica contiene el badge del mes activo
-              const isTargetColumn = data.column.index === 3; // Ajusta este índice si 'Mes(es) Activo' no es la columna 3
+              const isTargetColumn = data.column.index === 13; // Ajusta este índice si 'Mes(es) Activo' no es la columna 3
               if (isTargetColumn || rawHtml.includes('active-month-badge')) {
                 // 1. Dibujar el fondo redondeado antes de escribir el texto
                 doc.setFillColor(226, 232, 240); // Color de fondo gris suave
