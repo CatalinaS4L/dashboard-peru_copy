@@ -1800,8 +1800,9 @@ async function exportCurrentViewToPDF() {
       await new Promise(resolve => setTimeout(resolve, 150));
 
       const canvas = await html2canvas(block, { 
-        scale: 2, 
+        scale: 2,
         useCORS: true,
+        backgroundColor: null,
         logging: false,
         scrollX: 0,
         scrollY: 0,

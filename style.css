@@ -41,7 +41,7 @@ body {
 .filters-card h2, .table-card h2 {
   font-size: 1.2rem;
   margin-bottom: 16px;
-  color: #2c3e50;
+  color: #333;
 }
 
 .filters-grid {
@@ -85,7 +85,7 @@ th, td {
 
 th {
   background-color: #f1fcf8;
-  color: #475569;
+  color: #333;
   font-weight: 600;
   cursor: pointer;
   user-select: none;
@@ -120,23 +120,6 @@ th:hover {
   background-color: #06b706;
 }
 
-/* Estilo del botón Limpiar Filtros */
-.filter-actions button {
-  width: 100%;
-  padding: 8px 12px;
-  background-color: #ffb937;
-  color: #000000;
-  border: none;
-  border-radius: 4px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: background-color 0.2s ease;
-}
-
-.filter-actions button:hover {
-  background-color: #f4a134;
-}
-
 /* Navegación por Tabs */
 .tabs-container {
   display: flex;
@@ -150,7 +133,7 @@ th:hover {
   border: none;
   border-radius: 6px;
   font-weight: bold;
-  color: #475569;
+  color: #333;
   cursor: pointer;
   transition: all 0.2s ease;
 }
@@ -174,12 +157,7 @@ th:hover {
   background: #ffffff;
   border-radius: 8px;
   padding: 18px;
-  box-shadow: 0 2px 5px rgba(0,0,0,0.05);
-}
-
-.session-block a {
-  color: #2563eb;
-  text-decoration: underline;
+  box-shadow: 0 2px 5px #ccc;
 }
 
 .filters-grid input[type="text"] {
@@ -192,14 +170,14 @@ th:hover {
 }
 
 .filters-grid input[type="text"]:focus {
-  border-color: #2563eb;
-  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.2);
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 2px #d0f6d0;
 }
 
 /* Botones Foco */
 .btn-risk {
-  background-color: #ed6972;
-  color: white;
+  background-color: #ff4444;
+  color: #ffffff;
   border: none;
   padding: 8px 12px;
   border-radius: 4px;
@@ -209,13 +187,13 @@ th:hover {
 }
 
 .btn-risk:hover {
-  background-color: #d8525b;
+  background-color: #ff1111;
 }
 
 .btn-risk.active {
-  background-color: #900c3f;
-  box-shadow: inset 0 0 5px rgba(0,0,0,0.5);
-  border: 1px solid #fff;
+  background-color: #cd0000;
+  box-shadow: inset 0 0 5px #00000080;
+  border: 1px solid #000000;
 }
 
 .table-header-flex {
@@ -230,8 +208,8 @@ th:hover {
 }
 
 .btn-green {
-  background-color: #10b981;
-  color: white;
+  background-color: #06b706;
+  color: #ffffff;
   border: none;
   padding: 8px 12px;
   border-radius: 4px;
@@ -241,18 +219,18 @@ th:hover {
 }
 
 .btn-green:hover {
-  background-color: #059669;
+  background-color: #059e05;
 }
 
 .btn-green.active {
-  background-color: #046c4e;
-  box-shadow: inset 0 0 5px rgba(0,0,0,0.5);
-  border: 1px solid #fff;
+  background-color: #048604;
+  box-shadow: inset 0 0 5px #00000080;
+  border: 1px solid #000000;
 }
 
 .btn-regular {
   background-color: #3b82f6;
-  color: white;
+  color: #ffffff;
   border: none;
   padding: 8px 12px;
   border-radius: 4px;
@@ -267,8 +245,8 @@ th:hover {
 
 .btn-regular.active {
   background-color: #1a48ca;
-  box-shadow: inset 0 0 5px rgba(0,0,0,0.5);
-  border: 1px solid #fff;
+  box-shadow: inset 0 0 5px ##00000080;
+  border: 1px solid #000000;
 }
 
 /* Score Badges */
@@ -285,27 +263,22 @@ th:hover {
 .score-badge.red {
   background-color: #fee2e2;
   color: #991b1b;
-  border: 1px solid #f87171;
+  border: 1px solid #ff4444;
 }
 
 .score-badge.yellow {
   background-color: #fef3c7;
   color: #92400e;
-  border: 1px solid #fbbf24;
+  border: 1px solid #ffb937;
 }
 
 .score-badge.green {
   background-color: #d1fae5;
   color: #065f46;
-  border: 1px solid #34d399;
+  border: 1px solid #06b706;
 }
 
 /* Subpestañas */
-.subtabs-container {
-  border-bottom: 2px solid #e2e8f0;
-  padding-bottom: 8px;
-}
-
 .subtab-button {
   padding: 6px 14px;
   background-color: #f1fcf8;
@@ -319,13 +292,13 @@ th:hover {
 }
 
 .subtab-button.active {
-  background-color: #006900;
+  background-color: #059e05;
   color: #ffffff;
-  border-color: #092909;
+  border-color: #048604;
 }
 
 .subtab-button:hover:not(.active) {
-  background-color: #e1f8e0;
+  background-color: #d0f6d0;
   color: #06b706;
 }
 
@@ -341,7 +314,7 @@ th:hover {
   background: #ffffff;
   border-radius: 8px;
   padding: 16px 20px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+  box-shadow: 0 2px 8px #00000040;
   border-left: 5px solid #ffb937;
   display: flex;
   flex-direction: column;
@@ -355,7 +328,7 @@ th:hover {
 .summary-card-title {
   font-size: 0.85rem;
   font-weight: 600;
-  color: #2c3e50;
+  color: #333;
   text-transform: uppercase;
   letter-spacing: 0.5px;
 }
@@ -367,13 +340,13 @@ th:hover {
   margin: 6px 0;
 }
 
-.summary-card-value.text-red { color: #ff4444; }
-.summary-card-value.text-green { color: #06b706; }
-.summary-card-value.text-blue { color: #3b82f6; }
+.summary-card-value.text-red { color: #ff1111; }
+.summary-card-value.text-green { color: #059e05; }
+.summary-card-value.text-blue { color: #2563eb; }
 
 .summary-card-sub {
   font-size: 0.78rem;
-  color: #899cb6;
+  color: #00000080;
   font-weight: 500;
 }
 
@@ -381,11 +354,11 @@ th:hover {
   display: inline-block;
   padding: 3px 8px;
   background-color: #e2e8f0;
-  border: 1px solid #94a3b8;
+  border: 1px solid #ccc;
   border-radius: 5px;
   font-weight: 700;
-  color: #0f172a;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+  color: #333;
+  box-shadow: 0 1px 2px #00000040;
 }
 
 /* Gráficos y Cards */
@@ -399,47 +372,14 @@ th:hover {
   background: #ffffff;
   border-radius: 8px;
   padding: 16px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
-  border: 1px solid #e2e8f0;
-}
-
-.agent-trend-header {
-  border-bottom: 2px solid #06b706;
-  padding-bottom: 8px;
-  margin-bottom: 12px;
-}
-
-.agent-trend-header h3 {
-  font-size: 1.1rem;
-  color: #2c3e50;
+  box-shadow: 0 2px 8px #00000040;
+  border: 1px solid #ccc;
 }
 
 .agent-chart-container {
   position: relative;
   height: 250px;
   width: 100%;
-}
-
-.chart-wrapper {
-  position: relative;
-  width: 100%;
-  height: 450px;
-}
-
-.btn-pdf {
-  width: 100%;
-  padding: 8px 12px;
-  background-color: #ffb937;
-  color: #ffffff;
-  border: none;
-  border-radius: 4px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: background-color 0.2s ease;
-}
-
-.btn-pdf:hover {
-  background-color: #f4a134;
 }
 
 /* Contenedor flexible para los dos botones en paralelo */
@@ -457,7 +397,7 @@ th:hover {
   font-weight: 600;
   cursor: pointer;
   border: none;
-  background-color: #ffb937; /* Color naranja actual */
+  background-color: #ffb937;
   color: #000000;
   white-space: nowrap;
   transition: background-color 0.2s ease, opacity 0.2s ease;
@@ -472,8 +412,21 @@ th:hover {
   background-color: #ffb937; 
 }
 
+/* Opcional: Si quieres un color distinto para el botón de PDF cuando el cursor pasa por encima, cambia background-color aquí */
+.btn-pdf:hover {
+  background-color: #f4a134;
+}
+
 .chart-wrapper {
   position: relative;
   width: 100%;
   height: 400px; /* Incrementa la altura visual para que los textos e histogramas no se encimen */
 }
+
+@media print {
+  * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+}
+
