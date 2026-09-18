@@ -1877,6 +1877,23 @@ async function exportCurrentViewToPDF() {
               data.cell.text = data.cell.raw.replace(/<[^>]*>/g, '').trim();
             }
           }
+          // AGREGAR ESTE HOOK PARA DIBUJAR LOS PUNTOS EN EL PDF
+          didDrawCell: function(data) {
+            if (data.section === 'body') {
+              const rawHtml = data.cell.raw ? data.cell.raw.outerHTML || data.cell.raw.innerHTML || '' : '';
+              
+              let fillColor = null;
+              if (rawHtml.includes('dot-green')) fillColor = [6, 183, 6]; //#06b706
+              else if (rawHtml.includes('dot-yellow')) fillColor = [255, 185, 55]; //#FFB937
+              else if (rawHtml.includes('dot-red')) fillColor = [255, 68, 68]; //#FF4444
+        
+              if (fillColor) {
+                doc.setFillColor(...fillColor);
+                // Dibujar un círculo pequeño al inicio del texto de la celda
+                doc.circle(data.cell.x + 3, data.cell.y + (data.cell.height / 2), 1.2, 'F');
+              }
+            }
+          }
         });
 
         currentY = doc.lastAutoTable.finalY + 8;
