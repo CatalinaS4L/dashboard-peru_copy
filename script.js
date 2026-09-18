@@ -1877,11 +1877,11 @@ async function exportCurrentViewToPDF() {
               data.cell.text = data.cell.raw.replace(/<[^>]*>/g, '').trim();
             }
           },
-          // AGREGAR ESTE HOOK PARA DIBUJAR LOS PUNTOS EN EL PDF
           didDrawCell: function(data) {
             if (data.section === 'body') {
               const rawHtml = data.cell.raw ? data.cell.raw.outerHTML || data.cell.raw.innerHTML || '' : '';
               
+              // 1. Dibujar los puntos de cumplimiento (Punto a la derecha)
               let fillColor = null;
               if (rawHtml.includes('dot-green')) fillColor = [6, 183, 6]; //#06b706
               else if (rawHtml.includes('dot-yellow')) fillColor = [255, 185, 55]; //#FFB937
@@ -1889,11 +1889,29 @@ async function exportCurrentViewToPDF() {
         
               if (fillColor) {
                 doc.setFillColor(...fillColor);
-                // Dibujar un círculo pequeño al inicio del texto de la celda
                 const posX = data.cell.x + data.cell.width - 4; // Ajusta a 4px del borde derecho
                 const posY = data.cell.y + (data.cell.height / 2);
-                
                 doc.circle(posX, posY, 1.2, 'F');
+              }
+
+              // 2. Aplicar Negrilla y Subrayado al mes activo
+              if (rawHtml.includes('active-month-badge')) {
+                doc.setFont('helvetica', 'bold');
+                doc.setFontSize(7);
+                doc.setTextColor(30, 41, 59);
+        
+                // Volver a escribir el texto para darle énfasis y subrayarlo
+                const cellText = data.cell.text.join(' ');
+                const textX = data.cell.x + data.cell.padding('left');
+                const textY = data.cell.y + (data.cell.height / 2) + 1;
+        
+                doc.text(cellText, textX, textY);
+                
+                // Dibujar línea de subrayado
+                const textWidth = doc.getTextWidth(cellText);
+                doc.setLineWidth(0.3);
+                doc.setDrawColor(30, 41, 59);
+                doc.line(textX, textY + 0.8, textX + textWidth, textY + 0.8);
               }
             }
           }
