@@ -1870,47 +1870,40 @@ async function exportCurrentViewToPDF() {
           html: tableEl,
           startY: currentY,
           theme: 'grid',
-          styles: { 
-            fontSize: 7, 
-            cellPadding: 1.5,
-            overflow: 'linebreak' // Fuerza los saltos de línea dentro de la celda
-          },
+          styles: { fontSize: 7, cellPadding: 1.5 },
           headStyles: { fillColor: [6, 183, 6], textColor: [255, 255, 255], fontStyle: 'bold' },
-          
-          willDrawCell: function(data) {
-            if (data.section === 'body') {
-              const rawHtml = data.cell.raw ? (data.cell.raw.outerHTML || data.cell.raw.innerHTML || '') : '';
-        
-              // Verificar si ESTA celda específica contiene el badge del mes activo
-              const isTargetColumn = data.column.index === 13; // Ajusta este índice si 'Mes(es) Activo' no es la columna 3
-              if (isTargetColumn || rawHtml.includes('active-month-badge')) {
-                // 1. Dibujar el fondo redondeado antes de escribir el texto
-                doc.setFillColor(226, 232, 240); // Color de fondo gris suave
-                doc.setDrawColor(203, 213, 225); // Color de borde
-                doc.roundedRect(
-                  data.cell.x + 1, 
-                  data.cell.y + 1, 
-                  data.cell.width - 2, 
-                  data.cell.height - 2, 
-                  1, 1, 'FD'
-                );
-        
-                // 2. Aplicar estilos de fuente directamente a la celda
-                data.cell.styles.fontStyle = 'bold';
-                data.cell.styles.textColor = [15, 23, 42];
+          didParseCell: function(data) {
+            if (data.cell.raw) {
+              const rawHtml = typeof data.cell.raw === 'string' 
+                ? data.cell.raw 
+                : (data.cell.raw.innerHTML || '');
+
+              // Detectar si la celda contiene la etiqueta HTML del mes activo
+              if (rawHtml.includes('active-month-badge')) {
+                data.cell._isActiveMonthCell = true;
+                data.cell._rawHtml = rawHtml;
+              }
+
+              if (typeof data.cell.raw === 'string') {
+                data.cell.text = [data.cell.raw.replace(/<[^>]*>/g, '').trim()];
               }
             }
           },
-        
+          willDrawCell: function(data) {
+            // Vaciar temporalmente el texto automático para renderizarlo con formato mixto en didDrawCell
+            if (data.section === 'body' && data.cell._isActiveMonthCell) {
+              data.cell.text = [];
+            }
+          },
           didDrawCell: function(data) {
             if (data.section === 'body') {
-              const rawHtml = data.cell.raw ? (data.cell.raw.outerHTML || data.cell.raw.innerHTML || '') : '';
-        
-              // Dibujar los puntos de estado a la derecha sin afectar el texto
+              const rawHtml = data.cell._rawHtml || (data.cell.raw ? (data.cell.raw.outerHTML || data.cell.raw.innerHTML || '') : '');
+              
+              // 1. Dibujar puntos de semáforo si existen en la celda
               let fillColor = null;
-              if (rawHtml.includes('dot-green')) fillColor = [6, 183, 6]; //#06b706
-              else if (rawHtml.includes('dot-yellow')) fillColor = [255, 185, 55]; //#FFB937
-              else if (rawHtml.includes('dot-red')) fillColor = [255, 68, 68]; //#FF4444
+              if (rawHtml.includes('dot-green')) fillColor = [6, 183, 6];
+              else if (rawHtml.includes('dot-yellow')) fillColor = [255, 185, 55];
+              else if (rawHtml.includes('dot-red')) fillColor = [255, 68, 68];
         
               if (fillColor) {
                 doc.setFillColor(...fillColor);
@@ -1918,10 +1911,44 @@ async function exportCurrentViewToPDF() {
                 const posY = data.cell.y + (data.cell.height / 2);
                 doc.circle(posX, posY, 1.2, 'F');
               }
+
+              // 2. Renderizar los meses aplicando negrilla solo al mes activo
+              if (data.cell._isActiveMonthCell) {
+                const tempDiv = document.createElement('div');
+                tempDiv.innerHTML = data.cell._rawHtml;
+
+                const segments = [];
+                tempDiv.childNodes.forEach(node => {
+                  if (node.nodeType === 3) {
+                    if (node.textContent) segments.push({ text: node.textContent, isBold: false });
+                  } else if (node.nodeType === 1) {
+                    const isBadge = node.classList.contains('active-month-badge') || node.tagName === 'SPAN';
+                    segments.push({ text: node.textContent, isBold: isBadge });
+                  }
+                });
+
+                let currentX = data.cell.x + (data.cell.padding('left') || 1.5);
+                const currentY = data.cell.y + (data.cell.height / 2) + 1.2;
+                const baseFont = data.cell.styles.font || 'helvetica';
+
+                segments.forEach(seg => {
+                  if (seg.isBold) {
+                    doc.setFont(baseFont, 'bold');
+                    doc.setTextColor(30, 41, 59);
+                  } else {
+                    doc.setFont(baseFont, 'normal');
+                    doc.setTextColor(100, 116, 139);
+                  }
+                  doc.text(seg.text, currentX, currentY);
+                  currentX += doc.getTextWidth(seg.text);
+                });
+
+                doc.setFont(baseFont, 'normal');
+              }
             }
           }
         });
-        
+
         currentY = doc.lastAutoTable.finalY + 8;
       });
     }
