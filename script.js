@@ -1878,19 +1878,20 @@ async function exportCurrentViewToPDF() {
                 ? data.cell.raw 
                 : (data.cell.raw.innerHTML || '');
 
-              // Detectar si la celda contiene la etiqueta HTML del mes activo
               if (rawHtml.includes('active-month-badge')) {
                 data.cell._isActiveMonthCell = true;
                 data.cell._rawHtml = rawHtml;
               }
 
-              if (typeof data.cell.raw === 'string') {
-                data.cell.text = [data.cell.raw.replace(/<[^>]*>/g, '').trim()];
+              // Asignar texto plano para que autoTable calcule automáticamente la altura de la fila multilínea
+              if (typeof data.cell.raw === 'string' || data.cell.raw.innerHTML) {
+                const cleanText = (data.cell.raw.textContent || data.cell.raw.replace(/<[^>]*>/g, '')).trim();
+                data.cell.text = [cleanText];
               }
             }
           },
           willDrawCell: function(data) {
-            // Vaciar temporalmente el texto automático para renderizarlo con formato mixto en didDrawCell
+            // Vaciar texto por defecto para evitar sobreescritura (el alto de fila ya fue reservado)
             if (data.section === 'body' && data.cell._isActiveMonthCell) {
               data.cell.text = [];
             }
@@ -1899,7 +1900,7 @@ async function exportCurrentViewToPDF() {
             if (data.section === 'body') {
               const rawHtml = data.cell._rawHtml || (data.cell.raw ? (data.cell.raw.outerHTML || data.cell.raw.innerHTML || '') : '');
               
-              // 1. Dibujar puntos de semáforo si existen en la celda
+              // 1. Dibujar puntos de semáforo si existen
               let fillColor = null;
               if (rawHtml.includes('dot-green')) fillColor = [6, 183, 6];
               else if (rawHtml.includes('dot-yellow')) fillColor = [255, 185, 55];
@@ -1912,35 +1913,49 @@ async function exportCurrentViewToPDF() {
                 doc.circle(posX, posY, 1.2, 'F');
               }
 
-              // 2. Renderizar los meses aplicando negrilla solo al mes activo
+              // 2. Renderizar los meses con ajuste de línea (Word Wrap)
               if (data.cell._isActiveMonthCell) {
                 const tempDiv = document.createElement('div');
                 tempDiv.innerHTML = data.cell._rawHtml;
 
-                const segments = [];
+                // Extraer cada palabra conservando su estado de negrilla
+                const tokens = [];
                 tempDiv.childNodes.forEach(node => {
-                  if (node.nodeType === 3) {
-                    if (node.textContent) segments.push({ text: node.textContent, isBold: false });
-                  } else if (node.nodeType === 1) {
-                    const isBadge = node.classList.contains('active-month-badge') || node.tagName === 'SPAN';
-                    segments.push({ text: node.textContent, isBold: isBadge });
-                  }
+                  const isBold = node.nodeType === 1 && (node.classList.contains('active-month-badge') || node.tagName === 'SPAN');
+                  const text = node.textContent || '';
+                  const parts = text.match(/\S+\s*/g) || [];
+                  parts.forEach(part => {
+                    tokens.push({ text: part, isBold: isBold });
+                  });
                 });
 
-                let currentX = data.cell.x + (data.cell.padding('left') || 1.5);
-                const currentY = data.cell.y + (data.cell.height / 2) + 1.2;
+                const paddingLeft = data.cell.padding('left') || 1.5;
+                const paddingRight = data.cell.padding('right') || 1.5;
+                const paddingTop = data.cell.padding('top') || 1.5;
+                
+                const startX = data.cell.x + paddingLeft;
+                const maxX = data.cell.x + data.cell.width - paddingRight;
+                let currentX = startX;
+                
+                const lineHeight = 3.1; // Distancia vertical entre renglones (mm)
+                let currentY = data.cell.y + paddingTop + 2.2; // Posición de la primera línea
+
                 const baseFont = data.cell.styles.font || 'helvetica';
 
-                segments.forEach(seg => {
-                  if (seg.isBold) {
-                    doc.setFont(baseFont, 'bold');
-                    doc.setTextColor(30, 41, 59);
-                  } else {
-                    doc.setFont(baseFont, 'normal');
-                    doc.setTextColor(100, 116, 139);
+                tokens.forEach(token => {
+                  doc.setFont(baseFont, token.isBold ? 'bold' : 'normal');
+                  doc.setTextColor(token.isBold ? [30, 41, 59] : [100, 116, 139]);
+
+                  const tokenWidth = doc.getTextWidth(token.text);
+
+                  // Si la palabra no cabe en el renglón actual, pasa a la siguiente línea
+                  if (currentX + tokenWidth > maxX && currentX > startX) {
+                    currentX = startX;
+                    currentY += lineHeight;
                   }
-                  doc.text(seg.text, currentX, currentY);
-                  currentX += doc.getTextWidth(seg.text);
+
+                  doc.text(token.text, currentX, currentY);
+                  currentX += tokenWidth;
                 });
 
                 doc.setFont(baseFont, 'normal');
