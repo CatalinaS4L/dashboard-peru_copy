@@ -1876,7 +1876,7 @@ async function exportCurrentViewToPDF() {
             if (data.cell.raw && typeof data.cell.raw === 'string') {
               data.cell.text = data.cell.raw.replace(/<[^>]*>/g, '').trim();
             }
-          }
+          },
           // AGREGAR ESTE HOOK PARA DIBUJAR LOS PUNTOS EN EL PDF
           didDrawCell: function(data) {
             if (data.section === 'body') {
