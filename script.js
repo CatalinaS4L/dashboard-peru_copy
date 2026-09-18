@@ -1870,20 +1870,43 @@ async function exportCurrentViewToPDF() {
           html: tableEl,
           startY: currentY,
           theme: 'grid',
-          styles: { fontSize: 7, cellPadding: 1.5 },
+          styles: { 
+            fontSize: 7, 
+            cellPadding: 1.5,
+            overflow: 'linebreak' // Fuerza los saltos de línea dentro de la celda
+          },
           headStyles: { fillColor: [6, 183, 6], textColor: [255, 255, 255], fontStyle: 'bold' },
-          didParseCell: function(data) {
-            // Limpia las etiquetas HTML para dejar solo el texto limpio
-            if (data.cell.raw && typeof data.cell.raw === 'string') {
-              data.cell.text = data.cell.raw.replace(/<[^>]*>/g, '').trim();
+          
+          willDrawCell: function(data) {
+            if (data.section === 'body') {
+              const rawHtml = data.cell.raw ? (data.cell.raw.outerHTML || data.cell.raw.innerHTML || '') : '';
+        
+              // Verificar si ESTA celda específica contiene el badge del mes activo
+              const isTargetColumn = data.column.index === 3; // Ajusta este índice si 'Mes(es) Activo' no es la columna 3
+              if (isTargetColumn || rawHtml.includes('active-month-badge')) {
+                // 1. Dibujar el fondo redondeado antes de escribir el texto
+                doc.setFillColor(226, 232, 240); // Color de fondo gris suave
+                doc.setDrawColor(203, 213, 225); // Color de borde
+                doc.roundedRect(
+                  data.cell.x + 1, 
+                  data.cell.y + 1, 
+                  data.cell.width - 2, 
+                  data.cell.height - 2, 
+                  1, 1, 'FD'
+                );
+        
+                // 2. Aplicar estilos de fuente directamente a la celda
+                data.cell.styles.fontStyle = 'bold';
+                data.cell.styles.textColor = [15, 23, 42];
+              }
             }
           },
-          // AGREGAR ESTE HOOK PARA DIBUJAR LOS PUNTOS EN EL PDF
+        
           didDrawCell: function(data) {
             if (data.section === 'body') {
               const rawHtml = data.cell.raw ? (data.cell.raw.outerHTML || data.cell.raw.innerHTML || '') : '';
         
-              // 1. Dibujar los puntos de cumplimiento (Punto a la derecha)
+              // Dibujar los puntos de estado a la derecha sin afectar el texto
               let fillColor = null;
               if (rawHtml.includes('dot-green')) fillColor = [6, 183, 6]; //#06b706
               else if (rawHtml.includes('dot-yellow')) fillColor = [255, 185, 55]; //#FFB937
@@ -1891,37 +1914,14 @@ async function exportCurrentViewToPDF() {
         
               if (fillColor) {
                 doc.setFillColor(...fillColor);
-                const posX = data.cell.x + data.cell.width - 4; // Ajusta a 4px del borde derecho
+                const posX = data.cell.x + data.cell.width - 4;
                 const posY = data.cell.y + (data.cell.height / 2);
                 doc.circle(posX, posY, 1.2, 'F');
-              }
-        
-              // =========================================================
-              // 2. OPCIÓN B: Marcar con Fondo (Cajita resaltada)
-              // =========================================================
-              if (rawHtml.includes('active-month-badge')) {
-                const cellText = Array.isArray(data.cell.text) ? data.cell.text.join(' ') : data.cell.text;
-                
-                doc.setFont('helvetica', 'bold');
-                doc.setFontSize(7);
-                
-                const textWidth = doc.getTextWidth(cellText);
-                const textX = data.cell.x + data.cell.padding('left');
-                const textY = data.cell.y + (data.cell.height / 2) + 1;
-        
-                // Dibujar el rectángulo de fondo (Cajita gris suave estilo web)
-                doc.setFillColor(226, 232, 240); // Color #e2e8f0
-                doc.setDrawColor(203, 213, 225); // Borde #cbd5e1
-                doc.roundedRect(textX - 1, textY - 3.5, textWidth + 2, 4.5, 0.8, 0.8, 'FD');
-        
-                // Redibujar el texto del mes sobre la cajita para resaltar
-                doc.setTextColor(15, 23, 42);
-                doc.text(cellText, textX, textY);
               }
             }
           }
         });
-
+        
         currentY = doc.lastAutoTable.finalY + 8;
       });
     }
