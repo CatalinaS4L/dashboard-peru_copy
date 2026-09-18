@@ -1873,14 +1873,16 @@ async function exportCurrentViewToPDF() {
           styles: { fontSize: 7, cellPadding: 1.5 },
           headStyles: { fillColor: [6, 183, 6], textColor: [255, 255, 255], fontStyle: 'bold' },
           didParseCell: function(data) {
+            // Limpia las etiquetas HTML para dejar solo el texto limpio
             if (data.cell.raw && typeof data.cell.raw === 'string') {
               data.cell.text = data.cell.raw.replace(/<[^>]*>/g, '').trim();
             }
           },
+          // AGREGAR ESTE HOOK PARA DIBUJAR LOS PUNTOS EN EL PDF
           didDrawCell: function(data) {
             if (data.section === 'body') {
-              const rawHtml = data.cell.raw ? data.cell.raw.outerHTML || data.cell.raw.innerHTML || '' : '';
-              
+              const rawHtml = data.cell.raw ? (data.cell.raw.outerHTML || data.cell.raw.innerHTML || '') : '';
+        
               // 1. Dibujar los puntos de cumplimiento (Punto a la derecha)
               let fillColor = null;
               if (rawHtml.includes('dot-green')) fillColor = [6, 183, 6]; //#06b706
@@ -1893,25 +1895,28 @@ async function exportCurrentViewToPDF() {
                 const posY = data.cell.y + (data.cell.height / 2);
                 doc.circle(posX, posY, 1.2, 'F');
               }
-
-              // 2. Aplicar Negrilla y Subrayado al mes activo
+        
+              // =========================================================
+              // 2. OPCIÓN B: Marcar con Fondo (Cajita resaltada)
+              // =========================================================
               if (rawHtml.includes('active-month-badge')) {
+                const cellText = Array.isArray(data.cell.text) ? data.cell.text.join(' ') : data.cell.text;
+                
                 doc.setFont('helvetica', 'bold');
                 doc.setFontSize(7);
-                doc.setTextColor(30, 41, 59);
-        
-                // Volver a escribir el texto para darle énfasis y subrayarlo
-                const cellText = data.cell.text.join(' ');
+                
+                const textWidth = doc.getTextWidth(cellText);
                 const textX = data.cell.x + data.cell.padding('left');
                 const textY = data.cell.y + (data.cell.height / 2) + 1;
         
+                // Dibujar el rectángulo de fondo (Cajita gris suave estilo web)
+                doc.setFillColor(226, 232, 240); // Color #e2e8f0
+                doc.setDrawColor(203, 213, 225); // Borde #cbd5e1
+                doc.roundedRect(textX - 1, textY - 3.5, textWidth + 2, 4.5, 0.8, 0.8, 'FD');
+        
+                // Redibujar el texto del mes sobre la cajita para resaltar
+                doc.setTextColor(15, 23, 42);
                 doc.text(cellText, textX, textY);
-                
-                // Dibujar línea de subrayado
-                const textWidth = doc.getTextWidth(cellText);
-                doc.setLineWidth(0.3);
-                doc.setDrawColor(30, 41, 59);
-                doc.line(textX, textY + 0.8, textX + textWidth, textY + 0.8);
               }
             }
           }
