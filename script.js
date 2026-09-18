@@ -1870,7 +1870,7 @@ async function exportCurrentViewToPDF() {
           html: tableEl,
           startY: currentY,
           theme: 'grid',
-          styles: { fontSize: 7, cellPadding: 1.5 },
+          styles: { fontSize: 7, cellPadding: 1.5, halign: 'center', valign: 'middle' },
           headStyles: { fillColor: [6, 183, 6], textColor: [255, 255, 255], fontStyle: 'bold' },
           didParseCell: function(data) {
             if (data.cell.raw) {
@@ -1878,8 +1878,13 @@ async function exportCurrentViewToPDF() {
                 ? data.cell.raw 
                 : (data.cell.raw.innerHTML || '');
 
+              // Detectar celdas especiales
               if (rawHtml.includes('active-month-badge')) {
                 data.cell._isActiveMonthCell = true;
+                data.cell._rawHtml = rawHtml;
+              } else if (rawHtml.includes('%') || rawHtml.includes('badge') || rawHtml.includes('nota')) {
+                // Identificar si la celda contiene una nota con formato de píldora
+                data.cell._isScoreBadge = true;
                 data.cell._rawHtml = rawHtml;
               }
 
@@ -1890,15 +1895,54 @@ async function exportCurrentViewToPDF() {
             }
           },
           willDrawCell: function(data) {
-            if (data.section === 'body' && data.cell._isActiveMonthCell) {
+            // Ocultar texto por defecto en celdas personalizadas
+            if (data.section === 'body' && (data.cell._isActiveMonthCell || data.cell._isScoreBadge)) {
               data.cell.text = [];
             }
           },
           didDrawCell: function(data) {
             if (data.section === 'body') {
               const rawHtml = data.cell._rawHtml || (data.cell.raw ? (data.cell.raw.outerHTML || data.cell.raw.innerHTML || '') : '');
-              
-              // 1. Dibujar puntos de semáforo si existen
+
+              // 1. Dibujar píldoras/cápsulas de notas (Score Badges)
+              if (data.cell._isScoreBadge) {
+                const text = (data.cell.raw.textContent || data.cell.raw.replace(/<[^>]*>/g, '')).trim();
+                const val = parseFloat(text.replace('%', ''));
+
+                // Definir paleta de color según el valor o clases HTML
+		// CAMBIÉ LOS COLORES PARA QUE SEAN LOS MISMOS DE LA PÁGINA
+                let fill = [226, 232, 240], border = [204, 204, 204], textCol = [51, 51, 51]; 
+
+                if (rawHtml.includes('green') || val >= 90) {
+                  fill = [209, 250, 229]; border = [6, 183, 6]; textCol = [6, 95, 70];
+                } else if (rawHtml.includes('yellow') || rawHtml.includes('orange') || (val >= 50 && val < 90)) {
+                  fill = [254, 243, 199]; border = [255, 185, 55]; textCol = [146, 64, 14];
+                } else if (rawHtml.includes('red') || (val < 50 && !isNaN(val))) {
+                  fill = [254, 226, 226]; border = [255, 68, 68]; textCol = [153, 27, 27];
+                }
+
+                // Calcular dimensiones centradas de la píldora
+                doc.setFont(data.cell.styles.font || 'helvetica', 'bold');
+                doc.setFontSize(6.5);
+
+                const textWidth = doc.getTextWidth(text);
+                const badgeWidth = textWidth + 4;
+                const badgeHeight = 4.2;
+                const badgeX = data.cell.x + (data.cell.width - badgeWidth) / 2;
+                const badgeY = data.cell.y + (data.cell.height - badgeHeight) / 2;
+
+                // Dibujar fondo, borde y texto de la píldora
+                doc.setFillColor(fill[0], fill[1], fill[2]);
+                doc.setDrawColor(border[0], border[1], border[2]);
+                doc.setLineWidth(0.2);
+                doc.roundedRect(badgeX, badgeY, badgeWidth, badgeHeight, 1.8, 1.8, 'FD');
+
+                doc.setTextColor(textCol[0], textCol[1], textCol[2]);
+                doc.text(text, data.cell.x + (data.cell.width / 2), badgeY + 3, { align: 'center' });
+                return;
+              }
+
+              // 2. Dibujar puntos de semáforo si existen en otras columnas
               let fillColor = null;
               if (rawHtml.includes('dot-green')) fillColor = [6, 183, 6];
               else if (rawHtml.includes('dot-yellow')) fillColor = [255, 185, 55];
@@ -1909,58 +1953,6 @@ async function exportCurrentViewToPDF() {
                 const posX = data.cell.x + data.cell.width - 4;
                 const posY = data.cell.y + (data.cell.height / 2);
                 doc.circle(posX, posY, 1.2, 'F');
-              }
-
-              // 2. Renderizar los meses con salto de línea y color corregido
-              if (data.cell._isActiveMonthCell) {
-                const tempDiv = document.createElement('div');
-                tempDiv.innerHTML = data.cell._rawHtml;
-
-                const tokens = [];
-                tempDiv.childNodes.forEach(node => {
-                  const isBold = node.nodeType === 1 && (node.classList.contains('active-month-badge') || node.tagName === 'SPAN');
-                  const text = node.textContent || '';
-                  const parts = text.match(/\S+\s*/g) || [];
-                  parts.forEach(part => {
-                    tokens.push({ text: part, isBold: isBold });
-                  });
-                });
-
-                const paddingLeft = data.cell.padding('left') || 1.5;
-                const paddingRight = data.cell.padding('right') || 1.5;
-                const paddingTop = data.cell.padding('top') || 1.5;
-                
-                const startX = data.cell.x + paddingLeft;
-                const maxX = data.cell.x + data.cell.width - paddingRight;
-                let currentX = startX;
-                
-                const lineHeight = 3.1;
-                let currentY = data.cell.y + paddingTop + 2.2;
-
-                const baseFont = data.cell.styles.font || 'helvetica';
-
-                tokens.forEach(token => {
-                  doc.setFont(baseFont, token.isBold ? 'bold' : 'normal');
-                  
-                  // Asignar color RGB pasando los 3 parámetros individuales
-                  if (token.isBold) {
-                    doc.setTextColor(30, 41, 59);
-                  } else {
-                    doc.setTextColor(100, 116, 139);
-                  }
-
-                  const tokenWidth = doc.getTextWidth(token.text);
-
-                  if (currentX + tokenWidth > maxX && currentX > startX) {
-                    currentX = startX;
-                    currentY += lineHeight;
-                  }
-
-                  doc.text(token.text, currentX, currentY);
-                  currentX += tokenWidth;
-                });
-
-                doc.setFont(baseFont, 'normal');
               }
             }
           }
