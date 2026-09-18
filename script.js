@@ -1883,7 +1883,6 @@ async function exportCurrentViewToPDF() {
                 data.cell._rawHtml = rawHtml;
               }
 
-              // Asignar texto plano para que autoTable calcule automáticamente la altura de la fila multilínea
               if (typeof data.cell.raw === 'string' || data.cell.raw.innerHTML) {
                 const cleanText = (data.cell.raw.textContent || data.cell.raw.replace(/<[^>]*>/g, '')).trim();
                 data.cell.text = [cleanText];
@@ -1891,7 +1890,6 @@ async function exportCurrentViewToPDF() {
             }
           },
           willDrawCell: function(data) {
-            // Vaciar texto por defecto para evitar sobreescritura (el alto de fila ya fue reservado)
             if (data.section === 'body' && data.cell._isActiveMonthCell) {
               data.cell.text = [];
             }
@@ -1907,18 +1905,17 @@ async function exportCurrentViewToPDF() {
               else if (rawHtml.includes('dot-red')) fillColor = [255, 68, 68];
         
               if (fillColor) {
-                doc.setFillColor(...fillColor);
+                doc.setFillColor(fillColor[0], fillColor[1], fillColor[2]);
                 const posX = data.cell.x + data.cell.width - 4;
                 const posY = data.cell.y + (data.cell.height / 2);
                 doc.circle(posX, posY, 1.2, 'F');
               }
 
-              // 2. Renderizar los meses con ajuste de línea (Word Wrap)
+              // 2. Renderizar los meses con salto de línea y color corregido
               if (data.cell._isActiveMonthCell) {
                 const tempDiv = document.createElement('div');
                 tempDiv.innerHTML = data.cell._rawHtml;
 
-                // Extraer cada palabra conservando su estado de negrilla
                 const tokens = [];
                 tempDiv.childNodes.forEach(node => {
                   const isBold = node.nodeType === 1 && (node.classList.contains('active-month-badge') || node.tagName === 'SPAN');
@@ -1937,18 +1934,23 @@ async function exportCurrentViewToPDF() {
                 const maxX = data.cell.x + data.cell.width - paddingRight;
                 let currentX = startX;
                 
-                const lineHeight = 3.1; // Distancia vertical entre renglones (mm)
-                let currentY = data.cell.y + paddingTop + 2.2; // Posición de la primera línea
+                const lineHeight = 3.1;
+                let currentY = data.cell.y + paddingTop + 2.2;
 
                 const baseFont = data.cell.styles.font || 'helvetica';
 
                 tokens.forEach(token => {
                   doc.setFont(baseFont, token.isBold ? 'bold' : 'normal');
-                  doc.setTextColor(token.isBold ? [30, 41, 59] : [100, 116, 139]);
+                  
+                  // Asignar color RGB pasando los 3 parámetros individuales
+                  if (token.isBold) {
+                    doc.setTextColor(30, 41, 59);
+                  } else {
+                    doc.setTextColor(100, 116, 139);
+                  }
 
                   const tokenWidth = doc.getTextWidth(token.text);
 
-                  // Si la palabra no cabe en el renglón actual, pasa a la siguiente línea
                   if (currentX + tokenWidth > maxX && currentX > startX) {
                     currentX = startX;
                     currentY += lineHeight;
