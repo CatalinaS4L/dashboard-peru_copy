@@ -109,15 +109,21 @@ th:hover {
 }
 
 .dot-red {
-  background-color: #ff4444;
+  background-color: #ff4444 !important;
+  -webkit-print-color-adjust: exact !important;
+  print-color-adjust: exact !important;
 }
 
 .dot-yellow {
-  background-color: #ffb937;
+  background-color: #ffb937 !important;
+  -webkit-print-color-adjust: exact !important;
+  print-color-adjust: exact !important;
 }
 
 .dot-green {
-  background-color: #06b706;
+  background-color: #06b706 !important;
+  -webkit-print-color-adjust: exact !important;
+  print-color-adjust: exact !important;
 }
 
 /* Navegación por Tabs */
