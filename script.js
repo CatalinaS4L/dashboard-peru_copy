@@ -1,6 +1,6 @@
-// ==========================================
-// 1. ENLACES DIRECTOS A GOOGLE SHEETS
-// ==========================================
+// ============================================
+// 1. ENLACES DIRECTOS A GOOGLE SHEETS PERÚ
+// ============================================
 const MONTH_URLS = {
   febrero: `https://docs.google.com/spreadsheets/d/e/2PACX-1vRlckyPnPqEGlq9J9wk_1HwxkfHQqt6X4wHxNtPpRg-RRATO3asLAigUxUyin9D1OS0joXIpJkG8-tL/pub?gid=0&single=true&output=csv`,
   marzo: `https://docs.google.com/spreadsheets/d/e/2PACX-1vRlckyPnPqEGlq9J9wk_1HwxkfHQqt6X4wHxNtPpRg-RRATO3asLAigUxUyin9D1OS0joXIpJkG8-tL/pub?gid=397555912&single=true&output=csv`,
@@ -1779,7 +1779,6 @@ async function exportCurrentViewToPDF() {
     let currentY = 17 + (splitFilters.length * 4) + 4;
 
     // 4. CAPTURA DE ELEMENTOS VISUALES Y GRÁFICOS
-    // Se filtran los selectores redundantes para evitar duplicados en la pestaña Monitoreo Diagnóstico
     const selector = [
       '.chart-card', 
       '.agent-trend-card', 
@@ -1793,10 +1792,7 @@ async function exportCurrentViewToPDF() {
       const block = visualBlocks[i];
       if (block.offsetWidth === 0 || block.offsetHeight === 0) continue;
 
-      // Asegura que el elemento esté visible en pantalla antes de capturarlo
       block.scrollIntoView({ block: 'center' });
-      
-      // Pequeño retardo para asegurar que gráficos tipo Canvas/SVG/Matriz terminen de renderizarse
       await new Promise(resolve => setTimeout(resolve, 150));
 
       const canvas = await html2canvas(block, { 
@@ -1811,20 +1807,16 @@ async function exportCurrentViewToPDF() {
       });
       
       const imgData = canvas.toDataURL('image/png');
-      
-      // Conversión de dimensiones (px a mm)
       const pxToMm = 0.264583;
       let finalWidth = (canvas.width / 2) * pxToMm;
       let finalHeight = (canvas.height / 2) * pxToMm;
 
-      // 1. Escalar proporcionalmente si el ANCHO excede el límite del PDF
       if (finalWidth > pdfWidth) {
         const widthRatio = pdfWidth / finalWidth;
         finalWidth = pdfWidth;
         finalHeight = finalHeight * widthRatio;
       }
 
-      // 2. Escalar proporcionalmente si el ALTO excede el alto de la hoja
       const maxHeight = pageHeight - 20;
       if (finalHeight > maxHeight) {
         const heightRatio = maxHeight / finalHeight;
@@ -1832,17 +1824,14 @@ async function exportCurrentViewToPDF() {
         finalWidth = finalWidth * heightRatio;
       }
 
-      // 3. Evaluar salto de página si sobrepasa el límite vertical disponible
       if (currentY + finalHeight > pageHeight) {
         doc.addPage();
         currentY = 15;
       }
 
-      // Centrar la imagen en el lienzo PDF
       const xPosition = 14 + ((pdfWidth - finalWidth) / 2);
-
       doc.addImage(imgData, 'PNG', xPosition, currentY, finalWidth, finalHeight);
-      currentY += finalHeight + 8; // Espacio vertical entre bloques
+      currentY += finalHeight + 8;
     }
 
     // 5. RENDERIZADO DE TABLAS HTML
@@ -1878,12 +1867,10 @@ async function exportCurrentViewToPDF() {
                 ? data.cell.raw 
                 : (data.cell.raw.innerHTML || '');
 
-              // Detectar celdas especiales
               if (rawHtml.includes('active-month-badge')) {
                 data.cell._isActiveMonthCell = true;
                 data.cell._rawHtml = rawHtml;
               } else if (rawHtml.includes('%') || rawHtml.includes('badge') || rawHtml.includes('nota')) {
-                // Identificar si la celda contiene una nota con formato de píldora
                 data.cell._isScoreBadge = true;
                 data.cell._rawHtml = rawHtml;
               }
@@ -1895,7 +1882,6 @@ async function exportCurrentViewToPDF() {
             }
           },
           willDrawCell: function(data) {
-            // Ocultar texto por defecto en celdas personalizadas
             if (data.section === 'body' && (data.cell._isActiveMonthCell || data.cell._isScoreBadge)) {
               data.cell.text = [];
             }
@@ -1904,13 +1890,11 @@ async function exportCurrentViewToPDF() {
             if (data.section === 'body') {
               const rawHtml = data.cell._rawHtml || (data.cell.raw ? (data.cell.raw.outerHTML || data.cell.raw.innerHTML || '') : '');
 
-              // 1. Dibujar píldoras/cápsulas de notas (Score Badges)
+              // 1. Dibujar píldoras de notas/calificaciones
               if (data.cell._isScoreBadge) {
                 const text = (data.cell.raw.textContent || data.cell.raw.replace(/<[^>]*>/g, '')).trim();
                 const val = parseFloat(text.replace('%', ''));
 
-                // Definir paleta de color según el valor o clases HTML
-		// CAMBIÉ LOS COLORES PARA QUE SEAN LOS MISMOS DE LA PÁGINA
                 let fill = [226, 232, 240], border = [204, 204, 204], textCol = [51, 51, 51]; 
 
                 if (rawHtml.includes('green') || val >= 90) {
@@ -1921,7 +1905,6 @@ async function exportCurrentViewToPDF() {
                   fill = [254, 226, 226]; border = [255, 68, 68]; textCol = [153, 27, 27];
                 }
 
-                // Calcular dimensiones centradas de la píldora
                 doc.setFont(data.cell.styles.font || 'helvetica', 'bold');
                 doc.setFontSize(6.5);
 
@@ -1931,7 +1914,6 @@ async function exportCurrentViewToPDF() {
                 const badgeX = data.cell.x + (data.cell.width - badgeWidth) / 2;
                 const badgeY = data.cell.y + (data.cell.height - badgeHeight) / 2;
 
-                // Dibujar fondo, borde y texto de la píldora
                 doc.setFillColor(fill[0], fill[1], fill[2]);
                 doc.setDrawColor(border[0], border[1], border[2]);
                 doc.setLineWidth(0.2);
@@ -1942,7 +1924,121 @@ async function exportCurrentViewToPDF() {
                 return;
               }
 
-              // 2. Dibujar puntos de semáforo si existen en otras columnas
+              // 2. Dibujar celdas de Meses Activos con salto de línea (Multilínea)
+              if (data.cell._isActiveMonthCell) {
+                const tempDiv = document.createElement('div');
+                tempDiv.innerHTML = rawHtml;
+
+                const items = [];
+                tempDiv.childNodes.forEach(node => {
+                  if (node.nodeType === Node.ELEMENT_NODE && node.classList.contains('active-month-badge')) {
+                    const txt = node.textContent.trim();
+                    if (txt) items.push({ text: txt, isActive: true });
+                  } else if (node.nodeType === Node.TEXT_NODE) {
+                    const textStr = node.textContent;
+                    const partsStr = textStr.split(',');
+                    partsStr.forEach(p => {
+                      const trimmed = p.trim();
+                      if (trimmed) {
+                        items.push({ text: trimmed, isActive: false });
+                      }
+                    });
+                  }
+                });
+
+                if (items.length === 0) return;
+
+                const availableWidth = data.cell.width - 2.0;
+                const lines = [[]];
+                let currentLineIdx = 0;
+                let currentLineWidth = 0;
+
+                items.forEach((item, idx) => {
+                  const isLast = (idx === items.length - 1);
+                  const labelWithComma = item.text + (isLast ? '' : ',');
+
+                  doc.setFont('helvetica', item.isActive ? 'bold' : 'normal');
+                  doc.setFontSize(5.5);
+
+                  const pureTextWidth = doc.getTextWidth(item.text);
+                  const textWidth = doc.getTextWidth(labelWithComma);
+                  const itemWidth = item.isActive ? (pureTextWidth + 2.2 + (isLast ? 0 : doc.getTextWidth(','))) : textWidth;
+                  const spacing = isLast ? 0 : 1.0;
+
+                  if (lines[currentLineIdx].length > 0 && (currentLineWidth + itemWidth > availableWidth)) {
+                    currentLineIdx++;
+                    lines[currentLineIdx] = [];
+                    currentLineWidth = 0;
+                  }
+
+                  lines[currentLineIdx].push({
+                    text: item.text,
+                    hasComma: !isLast,
+                    isActive: item.isActive,
+                    pureTextWidth: pureTextWidth,
+                    textWidth: textWidth,
+                    itemWidth: itemWidth
+                  });
+
+                  currentLineWidth += itemWidth + spacing;
+                });
+
+                const totalLines = lines.length;
+                const lineHeight = 3.8;
+                const startY = data.cell.y + Math.max(2.0, (data.cell.height - (totalLines * lineHeight)) / 2) + 2.2;
+
+                lines.forEach((line, lineIdx) => {
+                  const lineY = startY + (lineIdx * lineHeight);
+                  
+                  let lineTotalWidth = 0;
+                  line.forEach((itemObj, i) => {
+                    lineTotalWidth += itemObj.itemWidth + (i === line.length - 1 ? 0 : 1.0);
+                  });
+
+                  let currentX = data.cell.x + Math.max(1.0, (data.cell.width - lineTotalWidth) / 2);
+
+                  line.forEach((itemObj) => {
+                    if (itemObj.isActive) {
+                      doc.setFont('helvetica', 'bold');
+                      doc.setFontSize(5.5);
+
+                      const badgeW = itemObj.pureTextWidth + 2.2;
+                      const badgeH = 3.4;
+                      const badgeY = lineY - 2.5;
+
+                      doc.setFillColor(226, 232, 240);
+                      doc.setDrawColor(203, 213, 225);
+                      doc.setLineWidth(0.15);
+                      doc.roundedRect(currentX, badgeY, badgeW, badgeH, 1.0, 1.0, 'FD');
+
+                      doc.setTextColor(30, 41, 59);
+                      doc.text(itemObj.text, currentX + (badgeW / 2), lineY, { align: 'center' });
+
+                      currentX += badgeW;
+
+                      if (itemObj.hasComma) {
+                        doc.setFont('helvetica', 'normal');
+                        doc.setTextColor(71, 85, 105);
+                        doc.text(',', currentX, lineY);
+                        currentX += doc.getTextWidth(',') + 1.0;
+                      } else {
+                        currentX += 1.0;
+                      }
+                    } else {
+                      const displayText = itemObj.text + (itemObj.hasComma ? ',' : '');
+                      doc.setFont('helvetica', 'normal');
+                      doc.setFontSize(5.5);
+                      doc.setTextColor(71, 85, 105);
+                      doc.text(displayText, currentX, lineY);
+
+                      currentX += itemObj.itemWidth + 1.0;
+                    }
+                  });
+                });
+                return;
+              }
+
+              // 3. Dibujar puntos de semáforo (si aplican)
               let fillColor = null;
               if (rawHtml.includes('dot-green')) fillColor = [6, 183, 6];
               else if (rawHtml.includes('dot-yellow')) fillColor = [255, 185, 55];
@@ -1961,6 +2057,18 @@ async function exportCurrentViewToPDF() {
         currentY = doc.lastAutoTable.finalY + 8;
       });
     }
+
+    // 6. Descarga del archivo
+    const filename = `Reporte_${tabTitle.replace(/\s+/g, '_')}_${new Date().toISOString().slice(0, 10)}.pdf`;
+    doc.save(filename);
+
+  } catch (error) {
+    console.error('Error al exportar PDF:', error);
+  } finally {
+    btnExport.textContent = 'Exportar a PDF';
+    btnExport.disabled = false;
+  }
+}
 
     // 6. Descarga del archivo
     const filename = `Reporte_${tabTitle.replace(/\s+/g, '_')}_${new Date().toISOString().slice(0, 10)}.pdf`;

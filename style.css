@@ -1,3 +1,5 @@
+/*Perú */
+
 /* Reset básico de estilos */
 * {
   box-sizing: border-box;
@@ -374,7 +376,28 @@ th:hover {
   gap: 20px;
 }
 
-.agent-trend-card, .chart-card {
+.agent-trend-card {
+  background: #ffffff;
+  border-radius: 8px;
+  padding: 16px;
+  box-shadow: 0 2px 8px #00000040;
+  border: 1px solid #ccc;
+  flex-direction: column;
+}
+
+.agent-trend-header {
+  margin-bottom: 12px;
+  border-bottom: 1px solid #e2e8f0;
+  padding-bottom: 8px;
+}
+
+.agent-trend-header h3 {
+  font-size: 1.1rem;
+  color: #333;
+  margin: 0;
+}
+
+.chart-card {
   background: #ffffff;
   border-radius: 8px;
   padding: 16px;
@@ -399,10 +422,10 @@ th:hover {
 /* Estilo base compartido por ambos botones */
 .btn-filter {
   padding: 10px 16px;
+  border: none;
   border-radius: 6px;
   font-weight: 600;
   cursor: pointer;
-  border: none;
   background-color: #ffb937;
   color: #000000;
   white-space: nowrap;
@@ -413,12 +436,11 @@ th:hover {
   background-color: #f4a134;
 }
 
-/* Opcional: Si quieres un color distinto para el botón de PDF, cambia background-color aquí */
+/* Opcional: Color distinto para el botón de PDF y hover, cambia background-color de ambas opciones aquí */
 .btn-pdf {
   background-color: #ffb937; 
 }
 
-/* Opcional: Si quieres un color distinto para el botón de PDF cuando el cursor pasa por encima, cambia background-color aquí */
 .btn-pdf:hover {
   background-color: #f4a134;
 }
