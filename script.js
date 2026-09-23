@@ -2070,18 +2070,6 @@ async function exportCurrentViewToPDF() {
   }
 }
 
-    // 6. Descarga del archivo
-    const filename = `Reporte_${tabTitle.replace(/\s+/g, '_')}_${new Date().toISOString().slice(0, 10)}.pdf`;
-    doc.save(filename);
-
-  } catch (error) {
-    console.error('Error al exportar PDF:', error);
-  } finally {
-    btnExport.textContent = 'Exportar a PDF';
-    btnExport.disabled = false;
-  }
-}
-
 document.addEventListener('DOMContentLoaded', () => {
   const btnExport = document.getElementById('btn-export-pdf');
   if (btnExport) {
