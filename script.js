@@ -700,7 +700,7 @@ function renderGroupedTable(data, groupKey, selector, tableId) {
   tbody.innerHTML = '';
 
   if (!data || data.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;">No hay datos disponibles.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="12" style="text-align:center;">No hay datos disponibles.</td></tr>';
     return;
   }
 
@@ -709,11 +709,13 @@ function renderGroupedTable(data, groupKey, selector, tableId) {
   data.forEach(row => {
     const rawLeader = getRowValue(row, groupKey);
     const leader = rawLeader ? rawLeader.trim() : `Sin ${groupKey.toLowerCase()}`;
+    const agentName = getRowValue(row, 'PROMOTOR');
 
     if (!groupMap[leader]) {
       groupMap[leader] = {
         leader: leader,
-        agentsCount: 0,
+        recordsCount: 0,                   // Muestra la "Cantidad de Registros" (lo que antes era Agentes a Cargo)
+        uniqueAgentsSet: new Set(),         // Guarda los nombres únicos para la cuenta de "Agentes Únicos a Cargo"
         metaTotal: 0,
         v1: 0, v2: 0, v3: 0, v4: 0, v5: 0,
         cierre: 0,
@@ -721,7 +723,11 @@ function renderGroupedTable(data, groupKey, selector, tableId) {
       };
     }
 
-    groupMap[leader].agentsCount += 1;
+    groupMap[leader].recordsCount += 1;
+    if (agentName) {
+      groupMap[leader].uniqueAgentsSet.add(agentName.toUpperCase());
+    }
+
     groupMap[leader].metaTotal += parseNum(getRowValue(row, 'META'));
     groupMap[leader].v1 += parseNum(getRowValue(row, 'V1'));
     groupMap[leader].v2 += parseNum(getRowValue(row, 'V2'));
@@ -743,15 +749,15 @@ function renderGroupedTable(data, groupKey, selector, tableId) {
     const isAsc = sortInfo.isAsc;
 
     leadersList.sort((a, b) => {
-      let valA = a[col];
-      let valB = b[col];
+      let valA = col === 'uniqueAgentsCount' ? a.uniqueAgentsSet.size : a[col];
+      let valB = col === 'uniqueAgentsCount' ? b.uniqueAgentsSet.size : b[col];
 
       if (typeof valA === 'number' && typeof valB === 'number') {
         return isAsc ? valA - valB : valB - valA;
       }
 
-      valA = valA.toString().toLowerCase();
-      valB = valB.toString().toLowerCase();
+      valA = valA ? valA.toString().toLowerCase() : '';
+      valB = valB ? valB.toString().toLowerCase() : '';
 
       if (valA < valB) return isAsc ? -1 : 1;
       if (valA > valB) return isAsc ? 1 : -1;
@@ -761,11 +767,13 @@ function renderGroupedTable(data, groupKey, selector, tableId) {
 
   leadersList.forEach(l => {
     const complianceHTML = getComplianceBadge(l.compliancePct.toString());
+    const uniqueAgentsCount = l.uniqueAgentsSet.size;
 
     const tr = document.createElement('tr');
     tr.innerHTML = `
       <td><strong>${l.leader}</strong></td>
-      <td>${l.agentsCount}</td>
+      <td>${uniqueAgentsCount}</td>
+      <td>${l.recordsCount}</td>
       <td>${l.metaTotal}</td>
       <td>${l.v1}</td>
       <td>${l.v2}</td>

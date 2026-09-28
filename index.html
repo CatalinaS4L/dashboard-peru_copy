@@ -1,3 +1,4 @@
+<!-- Perú -->
 <!DOCTYPE html> 
 <html lang="es">
 <head>
@@ -167,6 +168,33 @@
 
     <!-- TAB 2: Acumulativos por Líder -->
     <section id="tab-leaders" class="tab-content" style="display: none;">
+      
+      <!-- Acumulativo por Trainer -->
+      <div class="table-card" style="margin-bottom: 25px;">
+        <h2>Acumulativo por Trainer</h2>
+        <div class="table-wrapper">
+          <table id="trainers-table">
+            <thead>
+              <tr>
+                <th onclick="handleSort('trainers-table', 'leader')">Trainer</th>
+                <th onclick="handleSort('trainers-table', 'uniqueAgentsCount')">Agentes Únicos a Cargo</th>
+                <th onclick="handleSort('trainers-table', 'recordsCount')">Cantidad de Registros</th>
+                <th onclick="handleSort('trainers-table', 'metaTotal')">Meta Total</th>
+                <th onclick="handleSort('trainers-table', 'v1')">V1</th>
+                <th onclick="handleSort('trainers-table', 'v2')">V2</th>
+                <th onclick="handleSort('trainers-table', 'v3')">V3</th>
+                <th onclick="handleSort('trainers-table', 'v4')">V4</th>
+                <th onclick="handleSort('trainers-table', 'v5')">V5</th>
+                <th onclick="handleSort('trainers-table', 'cierre')">Cierre Total</th>
+                <th onclick="handleSort('trainers-table', 'compliancePct')">Cumplimiento Promedio %</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Acumulativo por Supervisor -->
       <div class="table-card" style="margin-bottom: 25px;">
         <h2>Acumulativo por Supervisor</h2>
         <div class="table-wrapper">
@@ -174,7 +202,8 @@
             <thead>
               <tr>
                 <th onclick="handleSort('supervisors-table', 'leader')">Supervisor</th>
-                <th onclick="handleSort('supervisors-table', 'agentsCount')">Agentes a Cargo</th>
+                <th onclick="handleSort('supervisors-table', 'uniqueAgentsCount')">Agentes Únicos a Cargo</th>
+                <th onclick="handleSort('supervisors-table', 'recordsCount')">Cantidad de Registros</th>
                 <th onclick="handleSort('supervisors-table', 'metaTotal')">Meta Total</th>
                 <th onclick="handleSort('supervisors-table', 'v1')">V1</th>
                 <th onclick="handleSort('supervisors-table', 'v2')">V2</th>
@@ -190,6 +219,7 @@
         </div>
       </div>
 
+      <!-- Acumulativo por Coordinador -->
       <div class="table-card">
         <h2>Acumulativo por Coordinador</h2>
         <div class="table-wrapper">
@@ -197,7 +227,8 @@
             <thead>
               <tr>
                 <th onclick="handleSort('coordinators-table', 'leader')">Coordinador</th>
-                <th onclick="handleSort('coordinators-table', 'agentsCount')">Agentes a Cargo</th>
+                <th onclick="handleSort('coordinators-table', 'uniqueAgentsCount')">Agentes Únicos a Cargo</th>
+                <th onclick="handleSort('coordinators-table', 'recordsCount')">Cantidad de Registros</th>
                 <th onclick="handleSort('coordinators-table', 'metaTotal')">Meta Total</th>
                 <th onclick="handleSort('coordinators-table', 'v1')">V1</th>
                 <th onclick="handleSort('coordinators-table', 'v2')">V2</th>
@@ -212,6 +243,7 @@
           </table>
         </div>
       </div>
+
     </section>
 
     <!-- TAB 3: Tendencias -->
