@@ -690,6 +690,7 @@ function renderFocusTable(data) {
 }
 
 function renderLeadersTables(data) {
+  renderGroupedTable(data, 'TRAINER', '#trainers-table tbody', 'trainers-table');
   renderGroupedTable(data, 'SUPERVISOR', '#supervisors-table tbody', 'supervisors-table');
   renderGroupedTable(data, 'COORDINADOR', '#coordinators-table tbody', 'coordinators-table');
 }
