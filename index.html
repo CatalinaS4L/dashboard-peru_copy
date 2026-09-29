@@ -107,6 +107,16 @@
           <label for="filter-status">Status Agente:</label>
           <select id="filter-status"><option value="">Todos</option></select>
         </div>
+        <div>
+          <label for="filter-unassigned">Filtrar Sin Asignación:</label>
+          <select id="filter-unassigned">
+            <option value="">Todos</option>
+            <option value="sin_coordinador">Sin Coordinador</option>
+            <option value="sin_supervisor">Sin Supervisor</option>
+            <option value="sin_trainer">Sin Trainer</option>
+            <option value="sin_lider">Sin Ningún Líder</option>
+          </select>
+        </div>
         <div class="filter-actions-container">
           <button id="btn-reset" type="button" class="btn-filter">Limpiar Filtros</button>
           <button id="btn-export-pdf" type="button" class="btn-filter btn-pdf">Exportar a PDF</button>

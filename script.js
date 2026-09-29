@@ -301,16 +301,38 @@ function filterData() {
   const supervisorVal = document.getElementById('filter-supervisor').value;
   const coordinadorVal = document.getElementById('filter-coordinador').value;
   const statusVal = document.getElementById('filter-status').value;
+  
+  // Capturar el filtro de Sin Asignar
+  const unassignedVal = document.getElementById('filter-unassigned')?.value || '';
 
   filteredData = rawData.filter(item => {
     const agentName = getRowValue(item, 'PROMOTOR').toLowerCase();
+    const trainer = getRowValue(item, 'TRAINER');
+    const supervisor = getRowValue(item, 'SUPERVISOR');
+    const coordinador = getRowValue(item, 'COORDINADOR');
+
     const matchSearch = !searchVal || agentName.includes(searchVal);
-    const matchTrainer = !trainerVal || getRowValue(item, 'TRAINER') === trainerVal;
-    const matchSupervisor = !supervisorVal || getRowValue(item, 'SUPERVISOR') === supervisorVal;
-    const matchCoordinador = !coordinadorVal || getRowValue(item, 'COORDINADOR') === coordinadorVal;
+    const matchTrainer = !trainerVal || trainer === trainerVal;
+    const matchSupervisor = !supervisorVal || supervisor === supervisorVal;
+    const matchCoordinador = !coordinadorVal || coordinador === coordinadorVal;
     const matchStatus = !statusVal || getRowValue(item, 'STATUS AGENTE') === statusVal;
+
+    // Validación para promotores sin asignación
+    let matchUnassigned = true;
+    if (unassignedVal === 'sin_coordinador') {
+      matchUnassigned = !coordinador || coordinador === '-' || coordinador.toLowerCase().includes('sin');
+    } else if (unassignedVal === 'sin_supervisor') {
+      matchUnassigned = !supervisor || supervisor === '-' || supervisor.toLowerCase().includes('sin');
+    } else if (unassignedVal === 'sin_trainer') {
+      matchUnassigned = !trainer || trainer === '-' || trainer.toLowerCase().includes('sin');
+    } else if (unassignedVal === 'sin_lider') {
+      const noCoord = !coordinador || coordinador === '-' || coordinador.toLowerCase().includes('sin');
+      const noSup = !supervisor || supervisor === '-' || supervisor.toLowerCase().includes('sin');
+      const noTrain = !trainer || trainer === '-' || trainer.toLowerCase().includes('sin');
+      matchUnassigned = noCoord || noSup || noTrain;
+    }
     
-    return matchSearch && matchTrainer && matchSupervisor && matchCoordinador && matchStatus;
+    return matchSearch && matchTrainer && matchSupervisor && matchCoordinador && matchStatus && matchUnassigned;
   });
 
   renderAllTables();
@@ -325,6 +347,7 @@ function resetAllFilters() {
   document.getElementById('filter-supervisor').value = '';
   document.getElementById('filter-coordinador').value = '';
   document.getElementById('filter-status').value = '';
+  document.getElementById('filter-unassigned').value = '';
 
   onlyCriticalRisk = false;
   onlyConsistentGreen = false;
@@ -2098,6 +2121,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   document.getElementById('filter-mes').addEventListener('change', loadDashboardData);
   document.getElementById('btn-reset').addEventListener('click', resetAllFilters);
+  document.getElementById('filter-unassigned')?.addEventListener('change', filterData);
   
   preloadAllMonths();
 
