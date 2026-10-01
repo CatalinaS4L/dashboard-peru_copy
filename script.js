@@ -263,12 +263,41 @@ function populateFilters(data) {
   const trainers = [...new Set(data.map(item => getRowValue(item, 'TRAINER')).filter(Boolean))];
   const supervisors = [...new Set(data.map(item => getRowValue(item, 'SUPERVISOR')).filter(Boolean))];
   const coordinadores = [...new Set(data.map(item => getRowValue(item, 'COORDINADOR')).filter(Boolean))];
-  const statuses = [...new Set(data.map(item => getRowValue(item, 'STATUS AGENTE')).filter(Boolean))];
+  const statuses = [...new Set(data.map(item => getRowValue(item, 'STATUS AGENTE')).filter(val => val && val !== '-'))];
 
   fillSelect('filter-trainer', trainers);
   fillSelect('filter-supervisor', supervisors);
   fillSelect('filter-coordinador', coordinadores);
-  fillSelect('filter-status', statuses);
+  fillSelectWithUnassignedStatus('filter-status', statuses);
+}
+
+function fillSelectWithUnassignedStatus(elementId, options) {
+  const select = document.getElementById(elementId);
+  if (!select) return;
+
+  const currentVal = select.value;
+  select.innerHTML = '<option value="">Todos</option>';
+
+  const unassignedOpt = document.createElement('option');
+  unassignedOpt.value = 'sin_status';
+  unassignedOpt.textContent = 'Sin Status';
+  select.appendChild(unassignedOpt);
+
+  options.sort().forEach(opt => {
+    const option = document.createElement('option');
+    option.value = opt;
+    option.textContent = opt;
+    select.appendChild(option);
+  });
+
+  if (options.includes(currentVal) || currentVal === 'sin_status') {
+    select.value = currentVal;
+  }
+
+  if (!select.dataset.hasListener) {
+    select.addEventListener('change', filterData);
+    select.dataset.hasListener = "true";
+  }
 }
 
 function fillSelect(elementId, options) {
@@ -310,12 +339,21 @@ function filterData() {
     const trainer = getRowValue(item, 'TRAINER');
     const supervisor = getRowValue(item, 'SUPERVISOR');
     const coordinador = getRowValue(item, 'COORDINADOR');
+    const statusAgente = getRowValue(item, 'STATUS AGENTE');
 
     const matchSearch = !searchVal || agentName.includes(searchVal);
     const matchTrainer = !trainerVal || trainer === trainerVal;
     const matchSupervisor = !supervisorVal || supervisor === supervisorVal;
     const matchCoordinador = !coordinadorVal || coordinador === coordinadorVal;
     const matchStatus = !statusVal || getRowValue(item, 'STATUS AGENTE') === statusVal;
+
+    // Evaluación del filtro Status Agente (incluyendo "Sin Status")
+    let matchStatus = true;
+    if (statusVal === 'sin_status') {
+      matchStatus = !statusAgente || statusAgente === '-' || statusAgente.trim() === '';
+    } else if (statusVal) {
+      matchStatus = statusAgente === statusVal;
+    }
 
     // Validación para promotores sin asignación
     let matchUnassigned = true;
