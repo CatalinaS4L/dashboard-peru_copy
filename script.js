@@ -1055,7 +1055,7 @@ function renderTrainerSessions(data) {
           <div><strong>Producto:</strong> ${s.producto}</div>
           <div><strong>Objeciones:</strong> ${s.objeciones}</div>
           <div><strong>Cierre:</strong> ${s.cierre}</div>
-          <div style="grid-column: 1 / -1;"><strong>Acuerdos + Estado:</strong> ${s.acuerdosEstado}</div>
+          <div><strong>Acuerdos + Estado:</strong> ${s.acuerdosEstado}</div>
         </div>
       </div>
     `).join('');
