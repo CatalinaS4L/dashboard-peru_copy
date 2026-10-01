@@ -871,11 +871,19 @@ function renderTrendsTable() {
       if (filterRow(row)) {
         if (!agentsHistory[agent]) {
           agentsHistory[agent] = {
-            trainer: getRowValue(row, 'TRAINER') || '-',
-            supervisor: getRowValue(row, 'SUPERVISOR') || '-',
+            trainer: '-',
+            supervisor: '-',
             months: {}
           };
         }
+
+        // Actualizamos siempre el Supervisor y Trainer con el registro más reciente del bucle
+        const currentSupervisor = getRowValue(row, 'SUPERVISOR');
+        const currentTrainer = getRowValue(row, 'TRAINER');
+
+        if (currentSupervisor) agentsHistory[agent].supervisor = currentSupervisor;
+        if (currentTrainer) agentsHistory[agent].trainer = currentTrainer;
+
         agentsHistory[agent].months[monthKey] = {
           v1: parseNum(getRowValue(row, 'V1')),
           v2: parseNum(getRowValue(row, 'V2')),
