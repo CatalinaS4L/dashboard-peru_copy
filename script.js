@@ -66,20 +66,18 @@ function filterRow(row) {
 
 // Lista de etiquetas clave para delimitar el parser de las sesiones
 const EXACT_KEYWORDS = [
-  "📅 Fecha", "🔗 URLTr", "🗣️ Speech", "📚 Producto", "🛡️ Objeciones", "🤝 Cierre", "📌 Acuerdos \\+ Estado"
+  "📅 Fecha", "🔗 URLTr", "🗣️ Speech", "📚 Producto", "🛡️ Objeciones", "🤝 Cierre", "📌 Acuerdos"
 ];
 
 function parseSessionField(fullText, exactLabel) {
   if (!fullText) return '-';
   
-  // Escapar la etiqueta buscada para usarla dentro de la Regex
+  // Escapar caracteres especiales de Regex
   const escapedLabel = exactLabel.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  const lookaheadPattern = EXACT_KEYWORDS.join('|');
+  const lookaheadPattern = EXACT_KEYWORDS.map(k => k.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|');
   
-  // Expresión regular corregida:
-  // consume únicamente los separadores pegados al título, permitiendo "-" internos en las respuestas.
   const regex = new RegExp(
-    `${escapedLabel}(?:\\s*[:\\-=])?\\s*([\\s\\S]*?)(?=(?:\\n\\s*)?(?:${lookaheadPattern})|$)`, 
+    `${escapedLabel}(?:\\s*\\+?\\s*Estado)?(?:\\s*[:\\-=])?\\s*([\\s\\S]*?)(?=(?:\\n\\s*)?(?:${lookaheadPattern})|$)`, 
     'i'
   );
   
@@ -1013,7 +1011,7 @@ function renderTrainerSessions(data) {
           let producto = parseSessionField(rawCellContent, '📚 Producto');
           let objeciones = parseSessionField(rawCellContent, '🛡️ Objeciones');
           let cierre = parseSessionField(rawCellContent, '🤝 Cierre');
-          let acuerdosEstado = parseSessionField(rawCellContent, '📌 Acuerdos \\+ Estado');
+          let acuerdosEstado = parseSessionField(rawCellContent, '📌 Acuerdos');
 
           if (fecha === '-') {
             const dateMatch = rawCellContent.match(/\d{1,2}[\/\.-]\d{1,2}[\/\.-]\d{2,4}/);
