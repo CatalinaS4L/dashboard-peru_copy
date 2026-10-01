@@ -345,7 +345,6 @@ function filterData() {
     const matchTrainer = !trainerVal || trainer === trainerVal;
     const matchSupervisor = !supervisorVal || supervisor === supervisorVal;
     const matchCoordinador = !coordinadorVal || coordinador === coordinadorVal;
-    const matchStatus = !statusVal || getRowValue(item, 'STATUS AGENTE') === statusVal;
 
     // Evaluación del filtro Status Agente (incluyendo "Sin Status")
     let matchStatus = true;
