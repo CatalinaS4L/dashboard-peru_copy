@@ -396,6 +396,25 @@ function resetAllFilters() {
   loadDashboardData();
 }
 
+function hasLastThreeLowMonths(agentMonthsData) {
+  const monthKeys = Object.keys(MONTH_URLS);
+  // Tomamos únicamente las claves de los últimos 3 meses
+  const last3Months = monthKeys.slice(-3);
+
+  // Si no hay al menos 3 meses registrados en la aplicación, no aplica
+  if (last3Months.length < 3) return false;
+
+  // Verificamos que los 3 meses estén presentes y tengan < 50%
+  return last3Months.every(m => {
+    const record = agentMonthsData[m];
+    if (record && record.cumplimiento !== '-') {
+      const pct = parseNum(record.cumplimiento);
+      return pct < 50;
+    }
+    return false;
+  });
+}
+
 function hasThreeConsecutiveLowMonths(agentMonthsData) {
   const monthKeys = Object.keys(MONTH_URLS);
   let consecutiveLowCount = 0;
@@ -673,13 +692,13 @@ function renderFocusTable(data) {
   if (onlyCriticalRisk) {
     agentsList = agentsList.filter(agent => {
       const isActive = agent.lastMonthStatus.includes('ACTIVO');
-      return isActive && hasThreeConsecutiveLowMonths(agent.monthsData);
+      return isActive && hasLastThreeLowMonths(agent.monthsData);
     });
   } else if (onlyConsistentGreen) {
     agentsList = agentsList.filter(agent => hasTwoConsecutiveGreenMonths(agent.monthsData));
   } else if (onlyRegularPerformers) {
     agentsList = agentsList.filter(agent => 
-      !hasThreeConsecutiveLowMonths(agent.monthsData) && 
+      !hasLastThreeLowMonths(agent.monthsData) && 
       !hasTwoConsecutiveGreenMonths(agent.monthsData)
     );
   }
@@ -1634,7 +1653,7 @@ function renderHeaderSummary() {
   activeAgentsLastMonth.forEach(agentName => {
     const agentObj = fullAgentsMap[agentName];
     if (agentObj) {
-      if (hasThreeConsecutiveLowMonths(agentObj.monthsData)) {
+      if (hasLastThreeLowMonths(agentObj.monthsData)) {
         countCriticalRisk++;
       }
       if (hasTwoConsecutiveGreenMonths(agentObj.monthsData)) {
