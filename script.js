@@ -415,46 +415,24 @@ function hasLastThreeLowMonths(agentMonthsData) {
   });
 }
 
-function hasThreeConsecutiveLowMonths(agentMonthsData) {
-  const monthKeys = Object.keys(MONTH_URLS);
-  let consecutiveLowCount = 0;
-
-  for (let m of monthKeys) {
-    const record = agentMonthsData[m];
-    if (record && record.cumplimiento !== '-') {
-      const pct = parseNum(record.cumplimiento);
-      if (pct < 50) {
-        consecutiveLowCount++;
-        if (consecutiveLowCount >= 3) return true;
-      } else {
-        consecutiveLowCount = 0;
-      }
-    } else {
-      consecutiveLowCount = 0;
-    }
-  }
-  return false;
-}
-
 function hasTwoConsecutiveGreenMonths(agentMonthsData) {
   const monthKeys = Object.keys(MONTH_URLS);
-  let consecutiveGreenCount = 0;
+  
+  // Requerimos al menos 2 meses en el sistema para evaluar la consistencia
+  if (monthKeys.length < 2) return false;
 
-  for (let m of monthKeys) {
+  // Extraer las claves de los 2 últimos meses registrados
+  const last2Months = monthKeys.slice(-2);
+
+  // Verificar que en AMBOS meses más recientes el cumplimiento sea >= 90%
+  return last2Months.every(m => {
     const record = agentMonthsData[m];
     if (record && record.cumplimiento !== '-') {
       const pct = parseNum(record.cumplimiento);
-      if (pct >= 90) {
-        consecutiveGreenCount++;
-        if (consecutiveGreenCount >= 2) return true;
-      } else {
-        consecutiveGreenCount = 0;
-      }
-    } else {
-      consecutiveGreenCount = 0;
+      return pct >= 90;
     }
-  }
-  return false;
+    return false;
+  });
 }
 
 function switchTab(tabName, evt) {
@@ -695,7 +673,9 @@ function renderFocusTable(data) {
       return isActive && hasLastThreeLowMonths(agent.monthsData);
     });
   } else if (onlyConsistentGreen) {
-    agentsList = agentsList.filter(agent => hasTwoConsecutiveGreenMonths(agent.monthsData));
+  agentsList = agentsList.filter(agent => {
+    const isActive = agent.lastMonthStatus.includes('ACTIVO');
+    return isActive && hasTwoConsecutiveGreenMonths(agent.monthsData);
   } else if (onlyRegularPerformers) {
     agentsList = agentsList.filter(agent => 
       !hasLastThreeLowMonths(agent.monthsData) && 
