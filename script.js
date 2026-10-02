@@ -673,9 +673,10 @@ function renderFocusTable(data) {
       return isActive && hasLastThreeLowMonths(agent.monthsData);
     });
   } else if (onlyConsistentGreen) {
-  agentsList = agentsList.filter(agent => {
-    const isActive = agent.lastMonthStatus.includes('ACTIVO');
-    return isActive && hasTwoConsecutiveGreenMonths(agent.monthsData);
+    agentsList = agentsList.filter(agent => {
+      const isActive = agent.lastMonthStatus.includes('ACTIVO');
+      return isActive && hasTwoConsecutiveGreenMonths(agent.monthsData);
+    });
   } else if (onlyRegularPerformers) {
     agentsList = agentsList.filter(agent => 
       !hasLastThreeLowMonths(agent.monthsData) && 
