@@ -1,4 +1,4 @@
-/*Perú */
+/*Perú*/
 
 /* Reset básico de estilos */
 * {
@@ -332,6 +332,7 @@ th:hover {
 .summary-card.border-red { border-left-color: #ff4444; }
 .summary-card.border-green { border-left-color: #06b706; }
 .summary-card.border-blue { border-left-color: #3b82f6; }
+.summary-card.border-purple { border-left-color: #8b5cf6; }
 
 .summary-card-title {
   font-size: 0.85rem;
@@ -351,6 +352,7 @@ th:hover {
 .summary-card-value.text-red { color: #ff1111; }
 .summary-card-value.text-green { color: #059e05; }
 .summary-card-value.text-blue { color: #2563eb; }
+.summary-card-value.text-purple { color: #7e49f5; }
 
 .summary-card-sub {
   font-size: 0.78rem;

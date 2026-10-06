@@ -1600,6 +1600,7 @@ function renderHeaderSummary() {
   const lastMonthData = allMonthsData[lastMonthKey] || [];
   const lastMonthFormatted = lastMonthKey.charAt(0).toUpperCase() + lastMonthKey.slice(1);
 
+  // --- CÁLCULO DE AGENTES ACTIVOS ---
   const activeAgentsLastMonth = new Set(
     lastMonthData
       .filter(row => {
@@ -1612,6 +1613,24 @@ function renderHeaderSummary() {
 
   const totalActive = activeAgentsLastMonth.size;
 
+  // --- NUEVO: CÁLCULO PROMEDIO CUMPLIMIENTO ÚLTIMO MES ---
+  let sumCompliance = 0;
+  let countCompliance = 0;
+
+  lastMonthData.forEach(row => {
+    const cumplVal = getRowValue(row, 'CUMPLIMIENTO MES');
+    if (cumplVal && cumplVal !== '-' && cumplVal.trim() !== '') {
+      const numVal = parseNum(cumplVal);
+      if (!isNaN(numVal)) {
+        sumCompliance += numVal;
+        countCompliance++;
+      }
+    }
+  });
+
+  const avgCompliance = countCompliance > 0 ? (sumCompliance / countCompliance).toFixed(1) : '0.0';
+
+  // --- MAPEO HISTÓRICO Y EVALUACIÓN DE FOCOS ---
   const fullAgentsMap = {};
   Object.keys(allMonthsData).forEach(m => {
     allMonthsData[m].forEach(row => {
@@ -1643,6 +1662,7 @@ function renderHeaderSummary() {
     }
   });
 
+  // --- CÁLCULO PROMEDIO CALIDAD ---
   let sumDiagnostic = 0;
   let countDiagnostic = 0;
 
@@ -1659,14 +1679,17 @@ function renderHeaderSummary() {
 
   const avgQuality = countDiagnostic > 0 ? (sumDiagnostic / countDiagnostic).toFixed(1) : '0.0';
 
+  // --- ASIGNACIÓN DE VALORES A LOS ELEMENTOS HTML ---
   const elActive = document.getElementById('kpi-active-agents');
   const elActiveMonth = document.getElementById('kpi-active-month');
+  const elCompliance = document.getElementById('kpi-avg-compliance'); // Elemento nuevo
   const elRisk = document.getElementById('kpi-critical-risk');
   const elGreen = document.getElementById('kpi-consistent-green');
   const elQuality = document.getElementById('kpi-avg-quality');
 
   if (elActive) elActive.textContent = totalActive;
   if (elActiveMonth) elActiveMonth.textContent = `Mes: ${lastMonthFormatted} 2026`;
+  if (elCompliance) elCompliance.textContent = `${avgCompliance}%`; // Muestra el % promedio
   if (elRisk) elRisk.textContent = countCriticalRisk;
   if (elGreen) elGreen.textContent = countConsistentGreen;
   if (elQuality) elQuality.textContent = `${avgQuality}%`;
