@@ -1137,6 +1137,24 @@ function getScoreBadge(valueStr) {
   return `<span class="score-badge ${colorClass}">${num.toFixed(1)}%</span>`;
 }
 
+// ============================================
+// MAPA DE COLORES POR MES (MONITOREO DIAGNÓSTICO)
+// ============================================
+const MONTH_COLORS = {
+  enero: '#002060',
+  febrero: '#C7B8E7',
+  marzo: '#744EC2',
+  abril: '#0066B2',
+  mayo: '#AB83FF',
+  junio: '#0055FF',
+  julio: '#009688',
+  agosto: '#00A3E0',
+  septiembre: '#D382FF',
+  octubre: '#73C2FB',
+  noviembre: '#667B9A',
+  diciembre: '#A666B0'
+};
+
 function renderQualityScatterPlot(data) {
   const canvas = document.getElementById('chartQualityVsPerformance');
   if (!canvas) return;
@@ -1152,11 +1170,34 @@ function renderQualityScatterPlot(data) {
     return;
   }
 
-  const scatterPoints = validData.map(row => ({
-    x: parseNum(getRowValue(row, 'NOTA FINAL')),
-    y: parseNum(getRowValue(row, 'CUMPLIMIENTO MES')),
-    agent: getRowValue(row, 'PROMOTOR') || 'Agente'
-  }));
+  // Orden cronológico de los meses para la leyenda
+  const monthOrder = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
+
+  // Obtener los meses presentes en los datos filtrados y ordenarlos
+  const monthsPresent = [...new Set(validData.map(r => (r._MES_ORIGEN || '').toLowerCase()))]
+    .sort((a, b) => monthOrder.indexOf(a) - monthOrder.indexOf(b));
+
+  // Crear un dataset individual por cada mes
+  const datasets = monthsPresent.map(monthKey => {
+    const monthRows = validData.filter(r => (r._MES_ORIGEN || '').toLowerCase() === monthKey);
+    const color = MONTH_COLORS[monthKey] || '#2563eb';
+    const formattedMonth = monthKey.charAt(0).toUpperCase() + monthKey.slice(1);
+
+    return {
+      label: formattedMonth,
+      data: monthRows.map(row => ({
+        x: parseNum(getRowValue(row, 'NOTA FINAL')),
+        y: parseNum(getRowValue(row, 'CUMPLIMIENTO MES')),
+        agent: getRowValue(row, 'PROMOTOR') || 'Agente',
+        mes: formattedMonth
+      })),
+      backgroundColor: color,
+      borderColor: color,
+      borderWidth: 1,
+      pointRadius: 6,
+      pointHoverRadius: 9
+    };
+  });
 
   if (scatterChartInstance) {
     scatterChartInstance.destroy();
@@ -1166,26 +1207,27 @@ function renderQualityScatterPlot(data) {
   scatterChartInstance = new Chart(ctx, {
     type: 'scatter',
     data: {
-      datasets: [{
-        label: 'Agentes',
-        data: scatterPoints,
-        backgroundColor: 'rgba(37, 99, 235, 0.7)',
-        borderColor: '#1d4ed8',
-        borderWidth: 1,
-        pointRadius: 6,
-        pointHoverRadius: 9
-      }]
+      datasets: datasets
     },
     options: {
       responsive: true,
       maintainAspectRatio: false,
       plugins: {
-        legend: { display: false },
+        legend: {
+          display: true,
+          position: 'bottom',
+          labels: {
+            usePointStyle: true,
+            boxWidth: 8,
+            padding: 15,
+            font: { size: 12, weight: '600' }
+          }
+        },
         tooltip: {
           callbacks: {
             label: (context) => {
               const pt = context.raw;
-              return `${pt.agent}: Calidad = ${pt.x}% | Cumplimiento = ${pt.y}%`;
+              return `${pt.agent} (${pt.mes}): Calidad = ${pt.x}% | Cumplimiento = ${pt.y}%`;
             }
           }
         },
